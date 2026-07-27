@@ -1,0 +1,2 @@
+INSERT OR IGNORE INTO gm_heroes(id,name,rarity,element,hero_class,description,base_hp,base_atk,base_def,upgrade_base_cost,upgrade_multiplier,max_level) VALUES ('aria','烈焰劍士・亞莉雅','稀有','火','戰士','前排劍士',360,104,18,150,1,100),('mira','冰霜法師・米菈','史詩','水','法師','冰霜法師',390,118,10,150,1,100),('gorn','鋼鐵守衛・戈恩','稀有','土','守衛','前排守衛',520,86,28,150,1,100);
+INSERT OR IGNORE INTO gm_announcements(id,title,body,priority,active) VALUES('v17','v1.7 GM 後台上線','英雄、技能、裝備、道具與活動可由後台管理。',100,1);
