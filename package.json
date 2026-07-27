@@ -1,23 +1,8 @@
 {
-  "name": "card-adventure-rpg-v1-7-2",
-  "version": "1.7.2",
+  "name": "card-adventure-rpg-v1.7.4",
   "private": true,
+  "version": "1.7.4",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "db:local": "wrangler d1 execute card-adventure-rpg-db --local --file=schema.sql",
-    "db:remote": "wrangler d1 execute card-adventure-rpg-db --remote --file=schema.sql",
-    "migrate:v1.3": "wrangler d1 execute card-adventure-rpg-db --remote --file=migrate-v1.2-to-v1.3.sql",
-    "migrate:v1.3.1": "wrangler d1 execute card-adventure-rpg-db --remote --file=migrate-v1.3-to-v1.3.1.sql",
-    "migrate:v1.4": "wrangler d1 execute card-adventure-rpg-db --remote --file=migrate-v1.3.1-to-v1.4.sql",
-    "migrate:v1.5": "wrangler d1 execute card-adventure-rpg-db --remote --file=migrate-v1.4-to-v1.5.sql",
-    "migrate:v1.6": "wrangler d1 execute card-adventure-rpg-db --remote --file=migrate-v1.5-to-v1.6.sql",
-    "migrate:v1.7": "wrangler d1 execute card-adventure-rpg-db --remote --file=migrate-v1.6-to-v1.7.sql",
-    "seed:v1.7": "wrangler d1 execute card-adventure-rpg-db --remote --file=seed-v1.7.sql",
-    "migrate:v1.7.2": "wrangler d1 execute card-adventure-rpg-db --remote --file=migrate-v1.7-to-v1.7.2.sql",
-    "sync:v1.7.2": "wrangler d1 execute card-adventure-rpg-db --remote --file=sync-defaults-v1.7.2.sql"
-  },
-  "devDependencies": {
-    "wrangler": "^4.0.0"
+    "check": "node --check worker/src/index.js && node scripts/check-worker.mjs"
   }
 }

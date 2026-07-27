@@ -122,3 +122,10 @@ body{
 .announcement-bar{cursor:pointer}
 
 .hero-art img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}.detail-main .hero-art img{object-position:center 18%}
+
+/* v1.7.6 announcement pagination and safe long-content display */
+.announcement-text{white-space:pre-wrap;overflow-wrap:anywhere}
+.announcement-read-more{margin-top:12px;min-width:120px}
+.announcement-pagination{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin:18px 0 calc(var(--bottom-nav-height) + 28px)}
+.announcement-pagination button.active{background:#7664ff;color:#fff;border-color:#8d80ff}
+@media(max-width:560px){.announcement-pagination{gap:5px}.announcement-pagination button{padding:9px 12px}.home-banner{min-height:150px}}

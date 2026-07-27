@@ -478,6 +478,10 @@ battlePotionButton.onclick=async()=>{
 };
 
 let SERVER_CATALOG=null,currentAnnouncementFilter="ALL",bannerIndex=0,bannerTimer=null;
+let announcementPageIndex=1;
+const ANNOUNCEMENTS_PER_PAGE=6;
+const ANNOUNCEMENT_PREVIEW_LENGTH=180;
+const expandedAnnouncements=new Set();
 async function loadPublicCatalog(){
   try{
     SERVER_CATALOG=await api("/api/catalog");
@@ -537,11 +541,48 @@ function renderBanner(){
   homeBanner.onclick=e=>{const dot=e.target.closest("[data-banner-index]");if(dot){bannerIndex=Number(dot.dataset.bannerIndex);renderBanner();return}if(b.link_target)showPage(b.link_target)};
   if(banners.length>1)bannerTimer=setInterval(()=>{bannerIndex=(bannerIndex+1)%banners.length;renderBanner()},6000);
 }
+function announcementRows(){
+  return activeAnnouncements()
+    .filter(a=>a.display_location!=="HOME_BAR_ONLY")
+    .filter(a=>currentAnnouncementFilter==="ALL"||(a.announcement_type||"NOTICE")===currentAnnouncementFilter);
+}
+function announcementExcerpt(body){
+  const text=String(body||"");
+  return text.length>ANNOUNCEMENT_PREVIEW_LENGTH?text.slice(0,ANNOUNCEMENT_PREVIEW_LENGTH).trimEnd()+"…":text;
+}
+function renderAnnouncementPagination(totalPages){
+  if(!window.announcementPagination)return;
+  if(totalPages<=1){announcementPagination.innerHTML="";return}
+  const buttons=[];
+  buttons.push(`<button class="secondary" data-ann-page="${announcementPageIndex-1}" ${announcementPageIndex<=1?"disabled":""}>上一頁</button>`);
+  for(let i=1;i<=totalPages;i++)buttons.push(`<button class="secondary ${i===announcementPageIndex?"active":""}" data-ann-page="${i}">${i}</button>`);
+  buttons.push(`<button class="secondary" data-ann-page="${announcementPageIndex+1}" ${announcementPageIndex>=totalPages?"disabled":""}>下一頁</button>`);
+  announcementPagination.innerHTML=buttons.join("");
+}
 function renderAnnouncements(){
   if(!window.announcementList)return;
-  const rows=activeAnnouncements().filter(a=>a.display_location!=="HOME_BAR_ONLY").filter(a=>currentAnnouncementFilter==="ALL"||(a.announcement_type||"NOTICE")===currentAnnouncementFilter);
-  announcementList.innerHTML=rows.length?rows.map(a=>`<article class="announcement-card ${a.pinned?"pinned":""}">${a.image_url?`<img class="announcement-cover" src="${escapeHtml(a.image_url)}" alt="">`:""}<div class="announcement-body"><div class="announcement-meta"><span class="announcement-type">${escapeHtml(a.announcement_type||"NOTICE")}</span>${a.pinned?'<span>📌 置頂</span>':""}<span>${formatAnnouncementDate(a.starts_at||a.created_at)}</span></div><h3>${escapeHtml(a.title)}</h3><p>${escapeHtml(a.body||"")}</p></div></article>`).join(""):'<div class="info-box">目前沒有符合條件的公告。</div>';
+  const rows=announcementRows();
+  const totalPages=Math.max(1,Math.ceil(rows.length/ANNOUNCEMENTS_PER_PAGE));
+  announcementPageIndex=Math.min(Math.max(1,announcementPageIndex),totalPages);
+  const start=(announcementPageIndex-1)*ANNOUNCEMENTS_PER_PAGE;
+  const pageRows=rows.slice(start,start+ANNOUNCEMENTS_PER_PAGE);
+  announcementList.innerHTML=pageRows.length?pageRows.map(a=>{
+    const key=String(a.id||a.title||"");
+    const body=String(a.body||"");
+    const expandable=body.length>ANNOUNCEMENT_PREVIEW_LENGTH;
+    const expanded=expandedAnnouncements.has(key);
+    const visibleBody=expanded?body:announcementExcerpt(body);
+    return `<article class="announcement-card ${a.pinned?"pinned":""}">${a.image_url?`<img class="announcement-cover" src="${escapeHtml(a.image_url)}" alt="">`:""}<div class="announcement-body"><div class="announcement-meta"><span class="announcement-type">${escapeHtml(a.announcement_type||"NOTICE")}</span>${a.pinned?'<span>📌 置頂</span>':""}<span>${formatAnnouncementDate(a.starts_at||a.created_at)}</span></div><h3>${escapeHtml(a.title)}</h3><p class="announcement-text">${escapeHtml(visibleBody)}</p>${expandable?`<button class="announcement-read-more secondary" data-ann-read="${escapeHtml(key)}">${expanded?"收合內容":"閱讀更多"}</button>`:""}</div></article>`
+  }).join(""):'<div class="info-box">目前沒有符合條件的公告。</div>';
+  renderAnnouncementPagination(rows.length?totalPages:0);
 }
 function formatAnnouncementDate(v){if(!v)return"";try{return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",dateStyle:"medium",timeStyle:"short"}).format(new Date(v))}catch{return v}}
-document.addEventListener("click",e=>{const b=e.target.closest("[data-ann-filter]");if(!b)return;currentAnnouncementFilter=b.dataset.annFilter;document.querySelectorAll("[data-ann-filter]").forEach(x=>x.classList.toggle("active",x===b));renderAnnouncements()});
+document.addEventListener("click",e=>{
+  const filter=e.target.closest("[data-ann-filter]");
+  if(filter){currentAnnouncementFilter=filter.dataset.annFilter;announcementPageIndex=1;expandedAnnouncements.clear();document.querySelectorAll("[data-ann-filter]").forEach(x=>x.classList.toggle("active",x===filter));renderAnnouncements();return}
+  const page=e.target.closest("[data-ann-page]");
+  if(page&&!page.disabled){announcementPageIndex=Number(page.dataset.annPage)||1;expandedAnnouncements.clear();renderAnnouncements();window.scrollTo({top:0,behavior:"smooth"});return}
+  const read=e.target.closest("[data-ann-read]");
+  if(read){const key=read.dataset.annRead;expandedAnnouncements.has(key)?expandedAnnouncements.delete(key):expandedAnnouncements.add(key);renderAnnouncements();return}
+});
 loadPublicCatalog();
