@@ -1,0 +1,19 @@
+name = "card-adventure-rpg"
+main = "src/index.js"
+compatibility_date = "2026-07-27"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "card-adventure-rpg-db"
+database_id = "5a7c4fc2-90d7-452c-9bc8-871ccdf1e7f9"
+
+[assets]
+directory = "../frontend"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*", "/auth/*"]
+
+# R2 圖片上傳：建立 Bucket 後取消註解
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "card-adventure-rpg-media"
