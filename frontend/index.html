@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#101329" />
-  <title>星界遠征：卡牌冒險 RPG v1.7.4</title>
+  <title>星界遠征：卡牌冒險 RPG</title>
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
   <link rel="stylesheet" href="./styles.css" />
@@ -69,6 +69,9 @@
           </button>
           <button class="dashboard-card" data-go="announcementPage">
             <span>📢</span><b>公告中心</b><small>查看更新、活動與維護公告</small>
+          </button>
+          <button class="dashboard-card arena-entry" data-go="arenaPage">
+            <span>⚔️</span><b>星界競技場</b><small>挑戰其他玩家的防守隊伍</small>
           </button>
           <button class="dashboard-card" data-go="rankingPage">
             <span>🏆</span><b>排行榜</b><small>查看全服冒險排名</small>
@@ -185,6 +188,26 @@
       <section id="mailPage" class="page">
         <div class="page-head"><button class="back" data-go="homePage">←</button><div><div class="eyebrow">MAILBOX</div><h2>冒險信箱</h2></div></div>
         <div id="mailList" class="inventory-list"></div>
+      </section>
+
+      <section id="arenaPage" class="page">
+        <div class="page-head"><button class="back" data-go="homePage">←</button><div><div class="eyebrow">ASYNC ARENA</div><h2>星界競技場</h2></div></div>
+        <div class="arena-hero">
+          <div><span class="chapter-badge">SEASON 1</span><h3 id="arenaTier">青銅 III</h3><p>由伺服器控制對手的防守隊伍，不需同時在線。</p></div>
+          <div class="arena-rating"><small>競技積分</small><b id="arenaRating">1000</b><span>🪙 <i id="arenaCoins">0</i> 競技幣</span></div>
+        </div>
+        <div class="arena-summary">
+          <div><small>今日剩餘挑戰</small><b id="arenaRemaining">5 / 5</b></div>
+          <div><small>本季勝場</small><b id="arenaWins">0</b></div>
+          <div><small>本季敗場</small><b id="arenaLosses">0</b></div>
+        </div>
+        <div class="section-title"><h3>防守隊伍</h3><button class="secondary" id="saveArenaDefense">儲存目前隊伍</button></div>
+        <div id="arenaDefense" class="arena-defense"></div>
+        <div class="section-title"><h3>可挑戰對手</h3><button class="text-btn" id="refreshArena">重新配對</button></div>
+        <div id="arenaOpponents" class="arena-opponents"></div>
+        <div class="section-title"><h3>最近戰鬥紀錄</h3></div>
+        <div id="arenaLogs" class="ranking-list"></div>
+        <div class="info-box">每日提供 5 次免費挑戰。勝利獲得積分與競技幣；賽季段位與獎勵將在後續版本擴充。</div>
       </section>
 
       <section id="rankingPage" class="page">

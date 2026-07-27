@@ -57,7 +57,7 @@ const xpNeed=lv=>60+lv*40,upgradeCost=lv=>150*lv,rankCost=rank=>({gold:rank*1200
 function equipmentBonus(heroId){const eq=state.owned[heroId]?.equipment||{};return Object.values(eq).reduce((a,id)=>{const e=EQUIPMENT[id];if(e){a.atk+=e.atk;a.hp+=e.hp}return a},{atk:0,hp:0})}
 function heroStats(id){const h=HEROES.find(x=>x.id===id),o=state.owned[id],lv=o?.level||1,b=equipmentBonus(id);return {...h,level:lv,hp:Math.round(h.baseHp*(1+(lv-1)*.11))+b.hp,atk:Math.round(h.baseAtk*(1+(lv-1)*.095))+b.atk}}
 function applyXp(id,amount){const o=state.owned[id];if(!o)return 0;o.xp+=amount;let levels=0;while(o.xp>=xpNeed(o.level)){o.xp-=xpNeed(o.level);o.level++;levels++}return levels}
-function showPage(id){if(id==="missionPage")loadMissions();if(id==="mailPage")loadMailbox();if(id==="rankingPage")loadRanking();if(id==="guildPage")loadAssists();if(id==="eventPage")loadEventCenter();if(id==="announcementPage")renderAnnouncements();document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===id));document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.go===id));window.scrollTo({top:0,behavior:"smooth"});renderAll()}
+function showPage(id){if(id==="missionPage")loadMissions();if(id==="mailPage")loadMailbox();if(id==="rankingPage")loadRanking();if(id==="guildPage")loadAssists();if(id==="eventPage")loadEventCenter();if(id==="announcementPage")renderAnnouncements();if(id==="arenaPage")loadArena();document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===id));document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.go===id));window.scrollTo({top:0,behavior:"smooth"});renderAll()}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b)showPage(b.dataset.go)});
 function stars(r){return r==="傳說"?"★★★★★":r==="史詩"?"★★★★":"★★★"}
 function heroCard(h,opt={}){const o=state.owned[h.id],st=heroStats(h.id),sel=state.team.includes(h.id),pct=Math.min(100,(o.xp/xpNeed(o.level))*100),rank=o.rank||1,rc=rankCost(rank);return `<article class="hero-card rarity-${h.rarity} ${opt.selectable&&sel?"selected":""}" ${opt.open?`data-open-hero="${h.id}"`:""}><div class="hero-art" style="--c1:${h.c1};--c2:${h.c2}">${h.imageUrl?`<img src="${escapeHtml(h.imageUrl)}" alt="${escapeHtml(h.name)}">`:`<span>${h.emoji}</span>`}</div><h4>${h.name}</h4><div class="stars">${stars(h.rarity)}</div><span class="rank-badge">突破 ${rank} 階</span><div class="hero-meta"><span>Lv.${st.level}</span><span>戰力 ${st.atk*10+st.hp}</span></div><div class="xp-wrap"><div class="xp-bar"><i style="width:${pct}%"></i></div><div class="xp-label"><span>EXP</span><span>${o.xp}/${xpNeed(o.level)}</span></div></div>${opt.actions?`<div class="hero-actions"><button data-upgrade="${h.id}">升級 🪙 ${upgradeCost(st.level)}</button><button data-rankup="${h.id}" ${rank>=5?"disabled":""}>${rank>=5?"已達最高突破":`突破 🪙 ${rc.gold}・🔮 ${rc.core}`}</button><button data-skill-upgrade="${h.id}">技能 Lv.${o.skillLevel||1} 🪙 ${(o.skillLevel||1)*800}</button></div><div class="growth-note">升級提高基礎能力；突破額外提高 8%；技能升級提高技能倍率。</div>`:""}${opt.selectable?`<div class="hero-actions"><button data-toggle-team="${h.id}">${sel?"移出隊伍":"加入隊伍"}</button></div>`:""}</article>`}
@@ -586,3 +586,65 @@ document.addEventListener("click",e=>{
   if(read){const key=read.dataset.annRead;expandedAnnouncements.has(key)?expandedAnnouncements.delete(key):expandedAnnouncements.add(key);renderAnnouncements();return}
 });
 loadPublicCatalog();
+
+
+// v1.7.7 非同步競技場
+let ARENA_DATA=null;
+function arenaHeroBadge(id){
+  const h=HEROES.find(x=>x.id===id);
+  if(!h)return `<span class="arena-hero-chip">✨ 未知英雄</span>`;
+  return `<span class="arena-hero-chip">${h.emoji||"✨"} ${escapeHtml(h.name)}</span>`;
+}
+async function loadArena(){
+  if(!window.arenaOpponents)return;
+  if(!CloudAccount.user){
+    arenaOpponents.innerHTML='<div class="info-box">星界競技場需要使用 LINE 登入，才能保存積分與戰鬥紀錄。</div>';
+    arenaLogs.innerHTML='';
+    return;
+  }
+  arenaOpponents.innerHTML='<div class="info-box">正在搜尋對手…</div>';
+  try{
+    ARENA_DATA=await api('/api/arena/status');
+    renderArena();
+  }catch(e){
+    arenaOpponents.innerHTML=`<div class="info-box">競技場讀取失敗：${escapeHtml(e.message)}</div>`;
+  }
+}
+function renderArena(){
+  if(!ARENA_DATA)return;
+  const p=ARENA_DATA.profile||{};
+  arenaTier.textContent=p.tier||'青銅 III';
+  arenaRating.textContent=p.rating||1000;
+  arenaCoins.textContent=p.arenaCoins||0;
+  arenaRemaining.textContent=`${ARENA_DATA.remaining??0} / 5`;
+  arenaWins.textContent=p.wins||0;
+  arenaLosses.textContent=p.losses||0;
+  const defense=Array.isArray(p.defenseTeam)&&p.defenseTeam.length?p.defenseTeam:state.team;
+  arenaDefense.innerHTML=defense.map(arenaHeroBadge).join('');
+  const opponents=ARENA_DATA.opponents||[];
+  arenaOpponents.innerHTML=opponents.length?opponents.map(o=>`<article class="arena-opponent">
+    <div class="arena-opponent-head"><div><b>${escapeHtml(o.displayName)}</b><small>${escapeHtml(o.tier)}・積分 ${o.rating}</small></div><strong>戰力 ${o.power}</strong></div>
+    <div class="arena-team">${(o.team||[]).map(arenaHeroBadge).join('')}</div>
+    <button class="primary" data-arena-challenge="${o.id}" ${(ARENA_DATA.remaining||0)<=0?'disabled':''}>挑戰</button>
+  </article>`).join(''):'<div class="info-box">目前沒有可挑戰的其他玩家。等待更多玩家加入後再試一次。</div>';
+  arenaLogs.innerHTML=(ARENA_DATA.logs||[]).length?ARENA_DATA.logs.map(x=>`<div class="ranking-row ${x.result==='WIN'?'arena-win':'arena-lose'}"><div class="rank">${x.result==='WIN'?'勝':'敗'}</div><div class="grow"><b>${escapeHtml(x.opponentName||'未知玩家')}</b><small style="display:block">${formatAnnouncementDate(x.createdAt)}・積分 ${x.ratingDelta>=0?'+':''}${x.ratingDelta}</small></div><strong>${x.result==='WIN'?'+30':'+10'} 幣</strong></div>`).join(''):'<div class="info-box">尚無競技場戰鬥紀錄。</div>';
+}
+async function saveArenaDefenseTeam(){
+  if(!CloudAccount.user)return toast('請先使用 LINE 登入');
+  try{
+    const r=await api('/api/arena/defense',{method:'POST',body:JSON.stringify({team:state.team})});
+    ARENA_DATA.profile=r.profile;renderArena();toast('防守隊伍已儲存');
+  }catch(e){toast('儲存失敗：'+e.message)}
+}
+async function challengeArena(opponentId){
+  if(!CloudAccount.user)return toast('請先使用 LINE 登入');
+  try{
+    const r=await api('/api/arena/challenge',{method:'POST',body:JSON.stringify({opponentId})});
+    state=r.state||state;localStorage.setItem('starRealmRpgSave',JSON.stringify(state));
+    modal(r.result==='WIN'?'🏆':'⚔️',r.result==='WIN'?'競技勝利':'挑戰失敗',`${r.result==='WIN'?'獲得':'仍獲得'} ${r.arenaCoinsEarned} 競技幣，積分 ${r.ratingDelta>=0?'+':''}${r.ratingDelta}。`);
+    await loadArena();renderAll();
+  }catch(e){toast(e.message==='ARENA_DAILY_LIMIT'?'今日挑戰次數已用完':'挑戰失敗：'+e.message)}
+}
+if(window.saveArenaDefense)saveArenaDefense.onclick=saveArenaDefenseTeam;
+if(window.refreshArena)refreshArena.onclick=loadArena;
+document.addEventListener('click',e=>{const b=e.target.closest('[data-arena-challenge]');if(b)challengeArena(b.dataset.arenaChallenge)});

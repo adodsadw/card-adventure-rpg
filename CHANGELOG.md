@@ -1,40 +1,14 @@
 # CHANGELOG
 
-## v1.7.6
+## v1.7.7
 
-- 公告長文新增閱讀更多與收合。
-- 公告中心每頁限制 6 篇並加入分頁。
-- 補充首頁 Banner 顯示位置與條件。
-- 新增後續遊戲模式規劃文件。
-
-# v1.7.6
-
-- 修正 `/media/*` 未經 Worker 路由，導致 R2 圖片破圖。
-- 確認圖片儲存在 Cloudflare R2 `card-adventure-rpg-media/uploads/*`。
-- 移除充值／扣除玩家 ID 欄位的 `readonly`。
-- 統一版本為 v1.7.6。
-
-
-## v1.7.4
-- 修復公告結束時間留空卻被存成空字串，導致前台查詢排除新公告。
-- 後台公告新增類型、顯示位置與置頂設定。
-- 新增 8 張英雄與 7 張商城現代星界風格 SVG 預設圖片。
-- 英雄卡片與英雄詳細頁支援顯示後台圖片。
-- 「補齊程式預設資料」會補上空白圖片並修復公告時間。
-
-
-## v1.7.4
+### 新增
+- 非同步競技場 PvP。
+- 每日 5 次挑戰、積分、段位、競技幣。
+- 防守隊伍、對手配對、最近戰鬥紀錄。
+- `migrate-v1.7.6-to-v1.7.7.sql`。
 
 ### 修正
-- 補回 `summon()`、`leaderboard()`、`daily()`。
-- 補回 `battleStart()`、`battleSettle()`。
-- 補回 `missions()`、`claimMission()`。
-- 補回 `mailList()`、`claimMail()`。
-- 補回 `catalogList()`、`catalogSave()`、`catalogDelete()`、`mediaUpload()`。
-- 恢復 `/api/catalog` 公開資料 API。
-- 恢復 `/api/admin/me`、`/api/admin/logout`、`/api/admin/players`。
-- 將 Admin、Frontend、Worker 版本統一為 v1.7.4。
-
-### 防止再次發生
-- 新增 `scripts/check-worker.mjs`，檢查必要函式與路由。
-- 新增 `docs/RELEASE_CHECKLIST.md` 與 `docs/API_CHECKLIST.md`。
+- 移除前台公開頁面的版本號。
+- 管理後台版本統一為 v1.7.7。
+- Service Worker 快取更新為 v1.7.7。

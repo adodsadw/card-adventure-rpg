@@ -17,3 +17,8 @@
 - [x] `GET/POST/DELETE /api/admin/catalog/:entity`
 - [x] `POST /api/admin/catalog/sync-defaults`
 - [x] `POST /api/admin/media/upload`
+
+## v1.7.7 Arena
+- `/api/arena/status` ✅
+- `/api/arena/defense` ✅
+- `/api/arena/challenge` ✅

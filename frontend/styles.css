@@ -129,3 +129,12 @@ body{
 .announcement-pagination{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin:18px 0 calc(var(--bottom-nav-height) + 28px)}
 .announcement-pagination button.active{background:#7664ff;color:#fff;border-color:#8d80ff}
 @media(max-width:560px){.announcement-pagination{gap:5px}.announcement-pagination button{padding:9px 12px}.home-banner{min-height:150px}}
+
+/* v1.7.7 async arena */
+.arena-entry{background:linear-gradient(145deg,#28275e,#171d3f)}
+.arena-hero{display:flex;justify-content:space-between;gap:18px;align-items:center;padding:24px;border:1px solid var(--border);border-radius:24px;background:radial-gradient(circle at 80% 20%,#7757ff44,transparent 35%),linear-gradient(145deg,#171b3b,#101329);margin-bottom:16px}
+.arena-hero h3{font-size:32px;margin:10px 0 6px}.arena-rating{text-align:right;display:grid;gap:5px}.arena-rating b{font-size:42px}.arena-rating i{font-style:normal}
+.arena-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}.arena-summary>div{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px}.arena-summary small{display:block;color:var(--muted)}.arena-summary b{font-size:24px}
+.arena-defense,.arena-team{display:flex;gap:8px;flex-wrap:wrap}.arena-defense{padding:14px;background:#0d1022;border:1px solid var(--border);border-radius:16px;margin-bottom:18px}.arena-hero-chip{display:inline-flex;align-items:center;padding:8px 10px;border-radius:999px;background:#252b53;border:1px solid #505b92;font-size:13px}
+.arena-opponents{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}.arena-opponent{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:16px;display:grid;gap:14px}.arena-opponent-head{display:flex;justify-content:space-between;gap:12px}.arena-opponent-head small{display:block;color:var(--muted);margin-top:4px}.arena-win .rank{color:#77e7a1}.arena-lose .rank{color:#ff879d}
+@media(max-width:640px){.arena-hero{align-items:flex-start}.arena-rating b{font-size:32px}.arena-summary{grid-template-columns:1fr}.arena-opponents{grid-template-columns:1fr}}
