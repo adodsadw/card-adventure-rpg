@@ -1,4 +1,4 @@
-# v1.7.3 API Checklist
+# v1.7.4 API Checklist
 
 - [x] `GET /api/health`
 - [x] `GET /api/catalog`

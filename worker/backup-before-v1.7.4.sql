@@ -15,7 +15,7 @@ CREATE TABLE players (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_login_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-INSERT INTO "players" ("id","line_user_id","display_name","picture_url","gold","gems","energy","max_energy","stage_unlocked","team_json","inventory_json","created_at","updated_at","last_login_at") VALUES('30139025-5317-4dd0-9137-f843d173dd5a','U0f407917e9337441318eb5541466a727','boo.cm','',812059,1000819,13,30,10,'["aria","mira","gorn"]','{"wood":3,"ore":6,"herb":9,"core":1,"potion":4,"energyPotion":0,"equipment":{"sword":1,"armor":1}}','2026-07-27 06:07:13','2026-07-27 08:27:09','2026-07-27 06:07:13');
+INSERT INTO "players" ("id","line_user_id","display_name","picture_url","gold","gems","energy","max_energy","stage_unlocked","team_json","inventory_json","created_at","updated_at","last_login_at") VALUES('30139025-5317-4dd0-9137-f843d173dd5a','U0f407917e9337441318eb5541466a727','boo.cm','',810009,1001119,16,30,10,'["aria","mira","gorn"]','{"wood":3,"ore":6,"herb":9,"core":6,"potion":5,"energyPotion":0,"equipment":{"sword":1,"armor":1}}','2026-07-27 06:07:13','2026-07-27 11:20:35','2026-07-27 06:07:13');
 CREATE TABLE game_saves (
   player_id TEXT PRIMARY KEY,
   state_json TEXT NOT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE game_saves (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
 );
-INSERT INTO "game_saves" ("player_id","state_json","save_version","updated_at") VALUES('30139025-5317-4dd0-9137-f843d173dd5a','{"gold":812059,"gems":1000819,"energy":13,"maxEnergy":30,"stageUnlocked":10,"dailyClaimed":"2026-07-27","team":["aria","mira","gorn"],"owned":{"aria":{"level":11,"rank":1,"xp":15,"copies":4,"equipment":{},"skillLevel":1},"mira":{"level":35,"rank":2,"xp":1275,"copies":2,"equipment":{},"skillLevel":16},"gorn":{"level":12,"rank":1,"xp":315,"copies":1,"equipment":{},"skillLevel":1},"elwyn":{"level":1,"xp":0,"copies":5,"equipment":{},"rank":1,"skillLevel":1},"kael":{"level":3,"xp":0,"copies":1,"equipment":{},"rank":1,"skillLevel":1},"nyx":{"level":1,"xp":0,"copies":1,"equipment":{},"rank":1,"skillLevel":1}},"inventory":{"wood":3,"ore":6,"herb":9,"core":1,"potion":4,"energyPotion":0,"equipment":{"sword":1,"armor":1}},"tutorialDone":true,"sound":true,"equipmentMeta":{"sword":{"level":1,"refine":2}}}',128,'2026-07-27 08:27:09');
+INSERT INTO "game_saves" ("player_id","state_json","save_version","updated_at") VALUES('30139025-5317-4dd0-9137-f843d173dd5a','{"gold":810009,"gems":1001119,"energy":16,"maxEnergy":30,"stageUnlocked":10,"dailyClaimed":"2026-07-27","team":["aria","mira","gorn"],"owned":{"aria":{"level":12,"rank":1,"xp":15,"copies":4,"equipment":{},"skillLevel":1},"mira":{"level":37,"rank":2,"xp":275,"copies":2,"equipment":{},"skillLevel":16},"gorn":{"level":13,"rank":1,"xp":275,"copies":1,"equipment":{},"skillLevel":1},"elwyn":{"level":1,"xp":0,"copies":5,"equipment":{},"rank":1,"skillLevel":1},"kael":{"level":3,"xp":0,"copies":1,"equipment":{},"rank":1,"skillLevel":1},"nyx":{"level":1,"xp":0,"copies":1,"equipment":{},"rank":1,"skillLevel":1}},"inventory":{"wood":3,"ore":6,"herb":9,"core":6,"potion":5,"energyPotion":0,"equipment":{"sword":1,"armor":1}},"tutorialDone":true,"sound":true,"equipmentMeta":{"sword":{"level":1,"refine":2}}}',136,'2026-07-27 11:20:35');
 CREATE TABLE player_heroes (
   player_id TEXT NOT NULL,
   hero_id TEXT NOT NULL,
@@ -72,6 +72,7 @@ INSERT INTO "battle_records" ("id","player_id","stage_id","result","reward_json"
 INSERT INTO "battle_records" ("id","player_id","stage_id","result","reward_json","created_at") VALUES(9,'30139025-5317-4dd0-9137-f843d173dd5a',7,'WIN','{"gold":1250,"xp":180,"gems":60}','2026-07-27 07:53:46');
 INSERT INTO "battle_records" ("id","player_id","stage_id","result","reward_json","created_at") VALUES(10,'30139025-5317-4dd0-9137-f843d173dd5a',8,'WIN','{"gold":1500,"xp":220,"herb":4}','2026-07-27 07:54:42');
 INSERT INTO "battle_records" ("id","player_id","stage_id","result","reward_json","created_at") VALUES(11,'30139025-5317-4dd0-9137-f843d173dd5a',9,'WIN','{"gold":1900,"xp":275,"gems":90,"core":2}','2026-07-27 07:55:47');
+INSERT INTO "battle_records" ("id","player_id","stage_id","result","reward_json","created_at") VALUES(12,'30139025-5317-4dd0-9137-f843d173dd5a',10,'WIN','{"gold":3500,"xp":500,"gems":300,"core":5}','2026-07-27 11:20:35');
 CREATE TABLE battle_tickets(id TEXT PRIMARY KEY,player_id TEXT NOT NULL,stage_id INTEGER NOT NULL,result TEXT,status TEXT NOT NULL DEFAULT 'OPEN',expires_at TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,settled_at TEXT,FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE);
 INSERT INTO "battle_tickets" ("id","player_id","stage_id","result","status","expires_at","created_at","settled_at") VALUES('367eb440-57f5-4b6c-88e4-a0c4e7ea3a11','30139025-5317-4dd0-9137-f843d173dd5a',1,'WIN','SETTLED','2026-07-27T06:34:22.718Z','2026-07-27 06:14:22','2026-07-27 06:14:34');
 INSERT INTO "battle_tickets" ("id","player_id","stage_id","result","status","expires_at","created_at","settled_at") VALUES('6f203384-22e3-4e2a-8bd0-cb08e29f1f69','30139025-5317-4dd0-9137-f843d173dd5a',1,'WIN','SETTLED','2026-07-27T07:32:07.094Z','2026-07-27 07:12:07','2026-07-27 07:12:15');
@@ -84,6 +85,7 @@ INSERT INTO "battle_tickets" ("id","player_id","stage_id","result","status","exp
 INSERT INTO "battle_tickets" ("id","player_id","stage_id","result","status","expires_at","created_at","settled_at") VALUES('c4644be0-b5f9-4d1d-8b92-b41666e9da05','30139025-5317-4dd0-9137-f843d173dd5a',7,'WIN','SETTLED','2026-07-27T08:13:33.091Z','2026-07-27 07:53:33','2026-07-27 07:53:46');
 INSERT INTO "battle_tickets" ("id","player_id","stage_id","result","status","expires_at","created_at","settled_at") VALUES('af4d449b-5574-4184-893f-c84a796272e7','30139025-5317-4dd0-9137-f843d173dd5a',8,'WIN','SETTLED','2026-07-27T08:14:24.421Z','2026-07-27 07:54:24','2026-07-27 07:54:42');
 INSERT INTO "battle_tickets" ("id","player_id","stage_id","result","status","expires_at","created_at","settled_at") VALUES('deebb204-87d2-4090-9659-d0f99dfb1357','30139025-5317-4dd0-9137-f843d173dd5a',9,'WIN','SETTLED','2026-07-27T08:15:31.132Z','2026-07-27 07:55:31','2026-07-27 07:55:47');
+INSERT INTO "battle_tickets" ("id","player_id","stage_id","result","status","expires_at","created_at","settled_at") VALUES('b7f6971c-8a38-42dc-b85a-1c3c5315899a','30139025-5317-4dd0-9137-f843d173dd5a',10,'WIN','SETTLED','2026-07-27T11:40:17.941Z','2026-07-27 11:20:17','2026-07-27 11:20:35');
 CREATE TABLE daily_claims(player_id TEXT NOT NULL,claim_date TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(player_id,claim_date),FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE);
 INSERT INTO "daily_claims" ("player_id","claim_date","created_at") VALUES('30139025-5317-4dd0-9137-f843d173dd5a','2026-07-27','2026-07-27 06:15:34');
 CREATE TABLE daily_missions(player_id TEXT NOT NULL,mission_date TEXT NOT NULL,mission_id TEXT NOT NULL,progress INTEGER NOT NULL DEFAULT 0,claimed_at TEXT,PRIMARY KEY(player_id,mission_date,mission_id),FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE);
@@ -116,6 +118,7 @@ INSERT INTO "shop_transactions" ("id","player_id","item_id","quantity","gold_cos
 INSERT INTO "shop_transactions" ("id","player_id","item_id","quantity","gold_cost","created_at") VALUES(5,'30139025-5317-4dd0-9137-f843d173dd5a','energyPotion',1,600,'2026-07-27 07:31:21');
 INSERT INTO "shop_transactions" ("id","player_id","item_id","quantity","gold_cost","created_at") VALUES(6,'30139025-5317-4dd0-9137-f843d173dd5a','energyPotion',1,600,'2026-07-27 07:31:22');
 INSERT INTO "shop_transactions" ("id","player_id","item_id","quantity","gold_cost","created_at") VALUES(7,'30139025-5317-4dd0-9137-f843d173dd5a','energyPotion',1,600,'2026-07-27 07:31:22');
+INSERT INTO "shop_transactions" ("id","player_id","item_id","quantity","gold_cost","created_at") VALUES(8,'30139025-5317-4dd0-9137-f843d173dd5a','potion',1,300,'2026-07-27 09:54:18');
 CREATE TABLE hero_growth_records (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   player_id TEXT NOT NULL,
@@ -195,6 +198,7 @@ INSERT INTO "hero_growth_records" ("id","player_id","hero_id","action","old_valu
 INSERT INTO "hero_growth_records" ("id","player_id","hero_id","action","old_value","new_value","cost_json","created_at") VALUES(66,'30139025-5317-4dd0-9137-f843d173dd5a','mira','LEVEL_UP',33,34,'{"gold":4950}','2026-07-27 07:55:07');
 INSERT INTO "hero_growth_records" ("id","player_id","hero_id","action","old_value","new_value","cost_json","created_at") VALUES(67,'30139025-5317-4dd0-9137-f843d173dd5a','mira','LEVEL_UP',34,35,'{"gold":5100}','2026-07-27 07:55:08');
 INSERT INTO "hero_growth_records" ("id","player_id","hero_id","action","old_value","new_value","cost_json","created_at") VALUES(68,'30139025-5317-4dd0-9137-f843d173dd5a','mira','RANK_UP',1,2,'{"gold":1200,"core":1}','2026-07-27 07:57:04');
+INSERT INTO "hero_growth_records" ("id","player_id","hero_id","action","old_value","new_value","cost_json","created_at") VALUES(69,'30139025-5317-4dd0-9137-f843d173dd5a','mira','LEVEL_UP',35,36,'{"gold":5250}','2026-07-27 09:44:11');
 CREATE TABLE item_use_records (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   player_id TEXT NOT NULL,
@@ -246,6 +250,7 @@ CREATE TABLE shop_daily_purchases (
   FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE
 );
 INSERT INTO "shop_daily_purchases" ("player_id","purchase_date","item_id","quantity") VALUES('30139025-5317-4dd0-9137-f843d173dd5a','2026-07-27','energyPotion',5);
+INSERT INTO "shop_daily_purchases" ("player_id","purchase_date","item_id","quantity") VALUES('30139025-5317-4dd0-9137-f843d173dd5a','2026-07-27','potion',1);
 CREATE TABLE dungeon_records (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   player_id TEXT NOT NULL,
@@ -291,7 +296,7 @@ CREATE TABLE player_runtime (
   last_energy_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE
 );
-INSERT INTO "player_runtime" ("player_id","last_energy_at") VALUES('30139025-5317-4dd0-9137-f843d173dd5a','2026-07-27 08:22:16');
+INSERT INTO "player_runtime" ("player_id","last_energy_at") VALUES('30139025-5317-4dd0-9137-f843d173dd5a','2026-07-27 11:20:17');
 CREATE TABLE gm_heroes(id TEXT PRIMARY KEY,name TEXT NOT NULL,rarity TEXT NOT NULL DEFAULT '稀有',element TEXT NOT NULL DEFAULT '',hero_class TEXT NOT NULL DEFAULT '',description TEXT NOT NULL DEFAULT '',image_url TEXT NOT NULL DEFAULT '',base_hp INTEGER NOT NULL DEFAULT 300,base_atk INTEGER NOT NULL DEFAULT 80,base_def INTEGER NOT NULL DEFAULT 0,upgrade_base_cost INTEGER NOT NULL DEFAULT 150,upgrade_multiplier REAL NOT NULL DEFAULT 1,max_level INTEGER NOT NULL DEFAULT 100,active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 INSERT INTO "gm_heroes" ("id","name","rarity","element","hero_class","description","image_url","base_hp","base_atk","base_def","upgrade_base_cost","upgrade_multiplier","max_level","active","created_at","updated_at") VALUES('aria','烈焰劍士・亞莉雅','稀有','火','戰士','前排劍士','',360,104,18,150,1,100,1,'2026-07-27 07:45:01','2026-07-27 07:45:01');
 INSERT INTO "gm_heroes" ("id","name","rarity","element","hero_class","description","image_url","base_hp","base_atk","base_def","upgrade_base_cost","upgrade_multiplier","max_level","active","created_at","updated_at") VALUES('mira','冰霜法師・米菈','史詩','水','法師','冰霜法師','',390,118,10,150,1,100,1,'2026-07-27 07:45:01','2026-07-27 07:45:01');
@@ -366,6 +371,7 @@ CREATE TABLE gm_announcements_v2 (
 );
 INSERT INTO "gm_announcements_v2" ("id","title","body","announcement_type","display_location","image_url","starts_at","ends_at","priority","pinned","active","created_at","updated_at") VALUES('v17','v1.7 GM 後台上線','英雄、技能、裝備、道具與活動可由後台管理。','NOTICE','HOME_AND_CENTER','',NULL,NULL,100,0,1,'2026-07-27 07:45:01','2026-07-27 07:45:01');
 INSERT INTO "gm_announcements_v2" ("id","title","body","announcement_type","display_location","image_url","starts_at","ends_at","priority","pinned","active","created_at","updated_at") VALUES('welcome-172','v1.7.2 資料同步與公告中心','原有英雄、技能、裝備、道具、商城、副本與登入獎勵已可在 GM 後台管理。','UPDATE','HOME_AND_CENTER','',NULL,NULL,100,1,1,'2026-07-27 08:07:41','2026-07-27 08:07:41');
+INSERT INTO "gm_announcements_v2" ("id","title","body","announcement_type","display_location","image_url","starts_at","ends_at","priority","pinned","active","created_at","updated_at") VALUES('tet','tet','et','NOTICE','HOME_AND_CENTER','tettt','','',1,0,1,'2026-07-27 09:44:44','2026-07-27 09:45:21');
 CREATE TABLE gm_default_sync_log (
   sync_key TEXT PRIMARY KEY,
   synced_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -373,10 +379,10 @@ CREATE TABLE gm_default_sync_log (
 INSERT INTO "gm_default_sync_log" ("sync_key","synced_at") VALUES('defaults-v1.7.2','2026-07-27 08:07:41');
 DELETE FROM sqlite_sequence;
 INSERT INTO "sqlite_sequence" ("name","seq") VALUES('admin_logs',3);
-INSERT INTO "sqlite_sequence" ("name","seq") VALUES('shop_transactions',7);
-INSERT INTO "sqlite_sequence" ("name","seq") VALUES('battle_records',11);
+INSERT INTO "sqlite_sequence" ("name","seq") VALUES('shop_transactions',8);
+INSERT INTO "sqlite_sequence" ("name","seq") VALUES('battle_records',12);
 INSERT INTO "sqlite_sequence" ("name","seq") VALUES('dungeon_records',2);
-INSERT INTO "sqlite_sequence" ("name","seq") VALUES('hero_growth_records',68);
+INSERT INTO "sqlite_sequence" ("name","seq") VALUES('hero_growth_records',69);
 INSERT INTO "sqlite_sequence" ("name","seq") VALUES('item_use_records',6);
 CREATE INDEX idx_players_line_user_id ON players(line_user_id);
 CREATE INDEX idx_sessions_hash ON sessions(token_hash);

@@ -1,4 +1,4 @@
--- v1.7.2 完整程式預設資料
+-- v1.7.4 完整程式預設資料（含預設圖片）
 -- 使用 INSERT OR IGNORE：只補缺少資料，不覆蓋 GM 已修改內容。
 
 INSERT OR IGNORE INTO gm_heroes

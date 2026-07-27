@@ -10,7 +10,7 @@ const STAGES={
 const SHOP={energyPotion:{price:600,kind:"item"},potion:{price:300,kind:"item"},wood:{price:180,kind:"material"},ore:{price:260,kind:"material"},herb:{price:220,kind:"material"},sword:{price:1800,kind:"equipment"},armor:{price:2200,kind:"equipment"}};
 const DEFAULT_STATE={gold:1200,gems:1200,energy:30,maxEnergy:30,stageUnlocked:1,dailyClaimed:"",team:["aria","mira","gorn"],owned:{aria:{level:1,rank:1,xp:0,copies:1,equipment:{}},mira:{level:1,rank:1,xp:0,copies:1,equipment:{}},gorn:{level:1,rank:1,xp:0,copies:1,equipment:{}}},inventory:{wood:0,ore:0,herb:0,core:0,potion:3,energyPotion:0,equipment:{sword:1,armor:1}},tutorialDone:false,sound:true};
 export default{async fetch(req,env){const u=new URL(req.url);try{
-if(u.pathname==="/api/health")return J({ok:true,version:"1.7.3",serverAuthoritative:true,admin:true});
+if(u.pathname==="/api/health")return J({ok:true,version:"1.7.4",serverAuthoritative:true,admin:true});
 if(u.pathname==="/api/diagnostics/line")return await lineDiagnostics(env,req);
 if(u.pathname==="/auth/line/start")return await startLine(req,env);if(u.pathname==="/auth/line/callback")return await callback(req,env);
 if(u.pathname==="/api/logout"&&req.method==="POST")return await logout(req,env);
@@ -181,31 +181,39 @@ async function publicCatalog(env){
       FROM gm_shop_products p
       LEFT JOIN gm_items i ON i.id=p.item_id
       WHERE p.active=1
-        AND (p.starts_at IS NULL OR p.starts_at<=?)
-        AND (p.ends_at IS NULL OR p.ends_at>?)
+        AND (NULLIF(p.starts_at,'') IS NULL OR p.starts_at<=?)
+        AND (NULLIF(p.ends_at,'') IS NULL OR p.ends_at>?)
       ORDER BY p.created_at`,[now,now]),
-    dungeons:await rows(env,"SELECT * FROM gm_dungeons WHERE active=1 AND (starts_at IS NULL OR starts_at<=?) AND (ends_at IS NULL OR ends_at>?) ORDER BY created_at",[now,now]),
-    events:await rows(env,"SELECT * FROM gm_events WHERE active=1 AND (starts_at IS NULL OR starts_at<=?) AND (ends_at IS NULL OR ends_at>?) ORDER BY created_at",[now,now]),
+    dungeons:await rows(env,"SELECT * FROM gm_dungeons WHERE active=1 AND (NULLIF(starts_at,'') IS NULL OR starts_at<=?) AND (NULLIF(ends_at,'') IS NULL OR ends_at>?) ORDER BY created_at",[now,now]),
+    events:await rows(env,"SELECT * FROM gm_events WHERE active=1 AND (NULLIF(starts_at,'') IS NULL OR starts_at<=?) AND (NULLIF(ends_at,'') IS NULL OR ends_at>?) ORDER BY created_at",[now,now]),
     loginRewards:await rows(env,"SELECT * FROM gm_login_rewards WHERE active=1 ORDER BY campaign_key,day_index"),
-    announcements:await rows(env,"SELECT * FROM gm_announcements_v2 WHERE active=1 AND (starts_at IS NULL OR starts_at<=?) AND (ends_at IS NULL OR ends_at>?) ORDER BY pinned DESC,priority DESC,created_at DESC",[now,now]),
-    banners:await rows(env,"SELECT * FROM gm_banners WHERE active=1 AND (starts_at IS NULL OR starts_at<=?) AND (ends_at IS NULL OR ends_at>?) ORDER BY sort_order,created_at DESC",[now,now]),
-    version:"1.7.3"
+    announcements:await rows(env,"SELECT * FROM gm_announcements_v2 WHERE active=1 AND (NULLIF(starts_at,'') IS NULL OR starts_at<=?) AND (NULLIF(ends_at,'') IS NULL OR ends_at>?) ORDER BY pinned DESC,priority DESC,created_at DESC",[now,now]),
+    banners:await rows(env,"SELECT * FROM gm_banners WHERE active=1 AND (NULLIF(starts_at,'') IS NULL OR starts_at<=?) AND (NULLIF(ends_at,'') IS NULL OR ends_at>?) ORDER BY sort_order,created_at DESC",[now,now]),
+    version:"1.7.4"
   });
 }
 async function catalogList(env,e){const t=CATALOG_TABLES[e];if(!t)return J({error:"UNKNOWN_ENTITY"},404);return J({rows:await rows(env,`SELECT * FROM ${t} ORDER BY updated_at DESC`)})}
-async function catalogSave(req,env,e){const t=CATALOG_TABLES[e];if(!t)return J({error:"UNKNOWN_ENTITY"},404);const d=await req.json();if(!d.id||!/^[a-zA-Z0-9_-]{1,80}$/.test(d.id))return J({error:"INVALID_ID"},400);const info=(await env.DB.prepare(`PRAGMA table_info(${t})`).all()).results,allow=info.map(x=>x.name).filter(x=>!["created_at","updated_at"].includes(x)),payload={};for(const k of allow)if(k in d)payload[k]=typeof d[k]==="boolean"?(d[k]?1:0):d[k];const cols=Object.keys(payload),vals=cols.map(k=>payload[k]),upd=cols.filter(k=>k!=="id").map(k=>`${k}=excluded.${k}`).join(",");await env.DB.prepare(`INSERT INTO ${t}(${cols.join(",")})VALUES(${cols.map(()=>"?").join(",")}) ON CONFLICT(id) DO UPDATE SET ${upd}${upd?",":""}updated_at=CURRENT_TIMESTAMP`).bind(...vals).run();return J({ok:true})}
+async function catalogSave(req,env,e){const t=CATALOG_TABLES[e];if(!t)return J({error:"UNKNOWN_ENTITY"},404);const d=await req.json();if(!d.id||!/^[a-zA-Z0-9_-]{1,80}$/.test(d.id))return J({error:"INVALID_ID"},400);const info=(await env.DB.prepare(`PRAGMA table_info(${t})`).all()).results,allow=info.map(x=>x.name).filter(x=>!["created_at","updated_at"].includes(x)),payload={};for(const k of allow)if(k in d){let v=typeof d[k]==="boolean"?(d[k]?1:0):d[k];if(["starts_at","ends_at"].includes(k)&&String(v??"").trim()==="")v=null;payload[k]=v}const cols=Object.keys(payload),vals=cols.map(k=>payload[k]),upd=cols.filter(k=>k!=="id").map(k=>`${k}=excluded.${k}`).join(",");await env.DB.prepare(`INSERT INTO ${t}(${cols.join(",")})VALUES(${cols.map(()=>"?").join(",")}) ON CONFLICT(id) DO UPDATE SET ${upd}${upd?",":""}updated_at=CURRENT_TIMESTAMP`).bind(...vals).run();return J({ok:true})}
 async function catalogDelete(env,e,id){const t=CATALOG_TABLES[e];if(!t)return J({error:"UNKNOWN_ENTITY"},404);await env.DB.prepare(`DELETE FROM ${t} WHERE id=?`).bind(id).run();return J({ok:true})}
 async function mediaUpload(req,env){if(!env.MEDIA)return J({error:"R2_NOT_CONFIGURED",message:"請先綁定 MEDIA R2 Bucket"},503);const f=(await req.formData()).get("file");if(!f||typeof f==="string")return J({error:"FILE_REQUIRED"},400);if(!["image/png","image/jpeg","image/webp"].includes(f.type)||f.size>2097152)return J({error:"INVALID_FILE",message:"僅支援 PNG/JPG/WebP，最大 2MB"},400);const ext=f.type==="image/png"?"png":f.type==="image/webp"?"webp":"jpg",key=`uploads/${crypto.randomUUID()}.${ext}`;await env.MEDIA.put(key,await f.arrayBuffer(),{httpMetadata:{contentType:f.type}});return J({ok:true,url:`/media/${key}`})}
 
 async function catalogSyncStatus(env){
-  const tableNames=["gm_heroes","gm_skills","gm_equipment","gm_items","gm_shop_products","gm_dungeons"];
-  const counts={};
-  for(const table of tableNames){
-    counts[table]=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM ${table}`).first())?.count||0);
+  const defaults={
+    gm_heroes:{aria:"/assets/heroes/aria.svg",mira:"/assets/heroes/mira.svg",gorn:"/assets/heroes/gorn.svg",luna:"/assets/heroes/luna.svg",kael:"/assets/heroes/kael.svg",elwyn:"/assets/heroes/elwyn.svg",sol:"/assets/heroes/sol.svg",nyx:"/assets/heroes/nyx.svg"},
+    gm_shop_products:{"shop-energy-potion":"/assets/shop/energyPotion.svg","shop-heal-potion":"/assets/shop/potion.svg","shop-wood":"/assets/shop/wood.svg","shop-ore":"/assets/shop/ore.svg","shop-herb":"/assets/shop/herb.svg","shop-sword":"/assets/shop/sword.svg","shop-armor":"/assets/shop/armor.svg"}
+  };
+  let updated=0;
+  for(const [table,map] of Object.entries(defaults))for(const [id,url] of Object.entries(map)){
+    const r=await env.DB.prepare(`UPDATE ${table} SET image_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND (image_url IS NULL OR TRIM(image_url)='')`).bind(url,id).run();
+    updated+=Number(r.meta?.changes||0);
   }
+  await env.DB.prepare("UPDATE gm_announcements_v2 SET starts_at=NULL WHERE starts_at='' ").run();
+  await env.DB.prepare("UPDATE gm_announcements_v2 SET ends_at=NULL WHERE ends_at='' ").run();
+  const tableNames=["gm_heroes","gm_skills","gm_equipment","gm_items","gm_shop_products","gm_dungeons"];
+  const counts={};for(const table of tableNames)counts[table]=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM ${table}`).first())?.count||0);
   const expected={gm_heroes:8,gm_skills:8,gm_equipment:5,gm_items:6,gm_shop_products:7,gm_dungeons:2};
   const missing=Object.entries(expected).filter(([key,value])=>counts[key]<value).map(([key,value])=>({table:key,current:counts[key],expected:value}));
-  return J({ok:missing.length===0,inserted:0,counts,missing,message:missing.length?"請在 worker 資料夾執行 sync-defaults-v1.7.2.sql，以補齊程式預設資料。":"預設資料已完整存在。"},missing.length?409:200);
+  return J({ok:missing.length===0,inserted:updated,updated,counts,missing,message:missing.length?"仍有預設資料缺少，請執行 sync-defaults-v1.7.4.sql。":`已補齊 ${updated} 筆預設圖片並修復公告時間欄位。`},missing.length?409:200);
 }
 
 async function summon(req,env,a){const {count}=await req.json();if(![1,10].includes(count))return J({error:"INVALID_COUNT"},400);const s=await stateOf(env,a.id),cost=count===10?900:100;if(s.gems<cost)return J({error:"GEMS_NOT_ENOUGH",message:"GEMS_NOT_ENOUGH"},409);s.gems-=cost;const got=[];for(let i=0;i<count;i++){const r=Math.random(),rarity=r<.05?"傳說":r<.28?"史詩":"稀有",pool=HEROES.filter(x=>x.rarity===rarity),h=pool[Math.floor(Math.random()*pool.length)];got.push(h);if(s.owned[h.id])s.owned[h.id].copies=(s.owned[h.id].copies||1)+1;else s.owned[h.id]={level:1,xp:0,copies:1,equipment:{}}}await save(env,a.id,s);await progress(env,a.id,"summon",count);return J({heroes:got,state:s})}
@@ -337,7 +345,7 @@ function getCookie(r,n){for(const x of (r.headers.get("Cookie")||"").split(";"))
 function cookie(n,v,age){return`${n}=${v}; Path=/; Max-Age=${age}; HttpOnly; Secure; SameSite=Strict`}
 
 async function lineDiagnostics(env,req){
- const result={ok:true,version:"1.7.3",origin:new URL(req.url).origin,checks:{lineChannelId:!!env.LINE_CHANNEL_ID,lineChannelSecret:!!env.LINE_CHANNEL_SECRET,d1Binding:!!env.DB,oauthStatesTable:false}};
+ const result={ok:true,version:"1.7.4",origin:new URL(req.url).origin,checks:{lineChannelId:!!env.LINE_CHANNEL_ID,lineChannelSecret:!!env.LINE_CHANNEL_SECRET,d1Binding:!!env.DB,oauthStatesTable:false}};
  if(env.DB){try{await env.DB.prepare("SELECT state FROM oauth_states LIMIT 1").first();result.checks.oauthStatesTable=true}catch(e){result.ok=false;result.databaseError=safeError(e)}}
  if(!result.checks.lineChannelId||!result.checks.lineChannelSecret||!result.checks.d1Binding||!result.checks.oauthStatesTable)result.ok=false;
  result.callbackUrl=result.origin+"/auth/line/callback";
