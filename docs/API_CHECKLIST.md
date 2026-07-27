@@ -1,24 +1,19 @@
-# v1.7.4 API Checklist
+# v1.8 API Checklist
 
-- [x] `GET /api/health`
-- [x] `GET /api/catalog`
-- [x] `GET /api/leaderboard`
-- [x] `POST /api/summon`
-- [x] `POST /api/daily`
-- [x] `POST /api/battle/start`
-- [x] `POST /api/battle/settle`
-- [x] `GET /api/missions`
-- [x] `POST /api/missions/:id/claim`
-- [x] `GET /api/mail`
-- [x] `POST /api/mail/:id/claim`
-- [x] `GET /api/admin/me`
-- [x] `POST /api/admin/logout`
-- [x] `GET /api/admin/players`
-- [x] `GET/POST/DELETE /api/admin/catalog/:entity`
-- [x] `POST /api/admin/catalog/sync-defaults`
-- [x] `POST /api/admin/media/upload`
+## 基礎
+- `/api/health`
+- `/api/catalog`
+- `/api/game-state`
+- `/api/summon`
+- `/api/leaderboard`
 
-## v1.7.7 Arena
-- `/api/arena/status` ✅
-- `/api/arena/defense` ✅
-- `/api/arena/challenge` ✅
+## Arena v1.8
+- `GET /api/arena/status`
+- `POST /api/arena/defense`
+- `POST /api/arena/refresh`
+- `POST /api/arena/challenge`
+- `POST /api/arena/spar`
+- `POST /api/arena/friends`
+- `GET /api/arena/leaderboard?scope=global|friends|guild`
+- `GET /api/arena/replay/:battleKey`
+- `POST /api/arena/rewards`

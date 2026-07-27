@@ -1,113 +1,76 @@
-# 星界遠征 v1.7.7：非同步競技場
+# 星界遠征 v1.8：完整非同步競技場
 
-本版直接由 v1.7.6 升級，前台不再顯示版本號；版本只保留在 GM 管理後台。新增第一階段非同步競技場 PvP。
+本版由 v1.7.7 原地升級。前台不顯示內部版本號，版本僅保留於 GM 管理後台。
 
-## v1.7.7 更新內容
+## v1.8 新增功能
 
-- 前台瀏覽器標題移除 `v1.x.x`，公開玩家不會看到內部版本。
-- GM 管理後台版本更新為 `v1.7.7`。
-- 新增「星界競技場」入口與競技場頁面。
-- 每日 5 次免費挑戰。
-- 伺服器配對積分相近的 3 位玩家。
-- 玩家可儲存目前 3 人隊伍為防守隊伍。
-- 對手由伺服器依存檔與防守隊伍計算戰力。
-- 勝利：競技積分 `+25`、競技幣 `+30`。
-- 失敗：競技積分 `-15`、競技幣 `+10`。
-- 新增青銅、白銀、黃金、白金、鑽石、星耀、傳奇段位。
-- 顯示最近 10 場競技紀錄。
+- 3 名對手 MMR 配對：同時參考積分與隊伍戰力。
+- 對手刷新：每 30 分鐘免費刷新；冷卻期間可花 20 鑽石刷新。
+- 獨立防守隊伍：不影響冒險推圖隊伍。
+- 防守 AI 策略：均衡、優先集火、優先治療。
+- 離線防守：對方不必在線，登入後可查看防守結果。
+- 戰鬥回放：以回合紀錄播放，不儲存影片。
+- 每日、每週、賽季獎勵。
+- 歷史最高段位、勝率、目前連勝、最佳連勝。
+- 好友互加與切磋；切磋不影響積分。
+- 全服、好友、公會排行榜。尚未加入公會時，公會榜會顯示提示。
+- 攻擊方與防守方的競技積分、勝敗統計會同時更新。
 
-> 本版是非同步 PvP：對方不需要同時在線，不使用 WebSocket，適合 Cloudflare Workers + D1。
+## 從 v1.7.7 升級
 
-## 專案固定設定
-
-Worker 名稱固定：
-
-```toml
-name = "card-adventure-rpg"
-```
-
-請保留既有 `wrangler.toml` 中的 D1 `database_id`、R2 Bucket 與 Assets 設定。
-
-## 從 v1.7.6 升級
-
-### 1. 進入 Worker 資料夾
+### 1. 進入 Worker 目錄
 
 ```bash
-cd card-adventure-rpg-v1.7.7/worker
+cd card-adventure-rpg-v1.8/worker
 ```
 
-### 2. 安裝套件
+### 2. 備份正式 D1
 
 ```bash
-npm install
+npx wrangler d1 export card-adventure-rpg-db --remote --output=backup-before-v1.8.sql --config wrangler.toml
 ```
 
-### 3. 備份正式 D1
+### 3. 執行 v1.8 Migration
 
 ```bash
-npx wrangler d1 export card-adventure-rpg-db --remote --output=backup-before-v1.7.7.sql --config wrangler.toml
+npx wrangler d1 execute card-adventure-rpg-db --remote --file=./migrate-v1.7.7-to-v1.8.sql --config wrangler.toml
 ```
 
-### 4. 執行競技場 Migration
+Migration 新增競技場防守策略、最高積分、連勝、對手刷新、回放、好友及獎勵資料表。
 
-```bash
-npx wrangler d1 execute card-adventure-rpg-db --remote --file=./migrate-v1.7.6-to-v1.7.7.sql --config wrangler.toml
-```
-
-Migration 會建立：
-
-- `arena_profiles`
-- `arena_daily_attempts`
-- `arena_battles`
-
-並為既有玩家建立初始競技資料，不會刪除原有存檔。
-
-### 5. 部署
+### 4. 部署
 
 ```bash
 npx wrangler deploy --config wrangler.toml
 ```
 
-### 6. 強制重新整理
+### 5. 強制重新整理
 
-部署後請在瀏覽器強制重新整理，避免舊 Service Worker 快取。v1.7.7 的快取名稱為：
+部署後請強制重新整理瀏覽器或清除舊 PWA 快取。Service Worker 快取名稱已更新為：
 
 ```text
-starrealm-v1.7.7
+starrealm-v1.8
 ```
 
-## 驗證方式
+## 測試方式
 
-登入兩個以上玩家帳號後：
+競技場至少需要兩個不同玩家帳號。對方玩家不需要在線，只要曾登入並建立競技場資料即可被配對。
 
-1. 在首頁點擊「星界競技場」。
-2. 點擊「儲存目前隊伍」。
-3. 確認畫面顯示 3 位或現有可配對玩家。
-4. 挑戰一次後，確認剩餘次數由 `5 / 5` 變成 `4 / 5`。
-5. 確認積分、勝敗場與競技幣更新。
-6. 重新整理後，資料仍需保留。
+1. 帳號 A 儲存防守隊伍與 AI 策略。
+2. 帳號 B 進入競技場並挑戰 A。
+3. 帳號 A 之後登入，可在戰鬥紀錄看到防守結果並開啟回放。
+4. 使用玩家 ID 加入好友後，可進行不影響積分的好友切磋。
 
-如果只有一個玩家帳號，競技場會顯示目前沒有其他對手，這是正常情況。
+## 固定設定
 
-## 部署前檢查
+Worker 名稱維持：
 
-在專案根目錄執行：
-
-```bash
-node --check worker/src/index.js
-node --check frontend/game.js
-node --check frontend/admin.js
-node scripts/check-worker.mjs
+```toml
+name = "card-adventure-rpg"
 ```
 
-## 後續競技場規劃
+媒體路由必須由 Worker 優先處理：
 
-下一階段建議加入：
-
-- 賽季每週結算與信箱獎勵
-- 競技幣商城
-- 防守成功／被挑戰紀錄
-- 復仇功能
-- 每日刷新配對
-- 段位排行榜
-- 賽季重置
+```toml
+run_worker_first = ["/api/*", "/auth/*", "/media/*"]
+```

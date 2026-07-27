@@ -277,7 +277,15 @@ CREATE TABLE IF NOT EXISTS arena_profiles (
   wins INTEGER NOT NULL DEFAULT 0,
   losses INTEGER NOT NULL DEFAULT 0,
   defense_team_json TEXT NOT NULL DEFAULT '[]',
+  defense_strategy TEXT NOT NULL DEFAULT 'BALANCED',
   season_key TEXT NOT NULL DEFAULT 'season-1',
+  highest_rating INTEGER NOT NULL DEFAULT 1000,
+  season_high_rating INTEGER NOT NULL DEFAULT 1000,
+  current_streak INTEGER NOT NULL DEFAULT 0,
+  best_streak INTEGER NOT NULL DEFAULT 0,
+  opponent_ids_json TEXT NOT NULL DEFAULT '[]',
+  next_free_refresh_at TEXT,
+  guild_id TEXT,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE
 );
@@ -292,6 +300,7 @@ CREATE TABLE IF NOT EXISTS arena_daily_attempts (
 
 CREATE TABLE IF NOT EXISTS arena_battles (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  battle_key TEXT UNIQUE,
   player_id TEXT NOT NULL,
   opponent_id TEXT NOT NULL,
   result TEXT NOT NULL CHECK(result IN ('WIN','LOSE')),
@@ -299,6 +308,8 @@ CREATE TABLE IF NOT EXISTS arena_battles (
   player_power INTEGER NOT NULL DEFAULT 0,
   opponent_power INTEGER NOT NULL DEFAULT 0,
   reward_json TEXT NOT NULL DEFAULT '{}',
+  replay_json TEXT NOT NULL DEFAULT '[]',
+  battle_type TEXT NOT NULL DEFAULT 'RANKED',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE
 );
@@ -307,3 +318,7 @@ CREATE INDEX IF NOT EXISTS idx_arena_rating ON arena_profiles(rating DESC);
 CREATE INDEX IF NOT EXISTS idx_arena_battles_player ON arena_battles(player_id,created_at DESC);
 INSERT OR IGNORE INTO arena_profiles(player_id,defense_team_json)
 SELECT p.id,COALESCE(NULLIF(p.team_json,''),'["aria","mira","gorn"]') FROM players p;
+
+-- v1.8 Arena expansion
+CREATE TABLE IF NOT EXISTS arena_reward_claims(player_id TEXT NOT NULL,reward_type TEXT NOT NULL,period_key TEXT NOT NULL,reward_json TEXT NOT NULL DEFAULT '{}',claimed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(player_id,reward_type,period_key),FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE);
+CREATE TABLE IF NOT EXISTS arena_friendships(player_id TEXT NOT NULL,friend_player_id TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(player_id,friend_player_id),FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE,FOREIGN KEY(friend_player_id) REFERENCES players(id) ON DELETE CASCADE);

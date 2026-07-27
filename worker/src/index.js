@@ -10,7 +10,7 @@ const STAGES={
 const SHOP={energyPotion:{price:600,kind:"item"},potion:{price:300,kind:"item"},wood:{price:180,kind:"material"},ore:{price:260,kind:"material"},herb:{price:220,kind:"material"},sword:{price:1800,kind:"equipment"},armor:{price:2200,kind:"equipment"}};
 const DEFAULT_STATE={gold:1200,gems:1200,energy:30,maxEnergy:30,stageUnlocked:1,dailyClaimed:"",team:["aria","mira","gorn"],owned:{aria:{level:1,rank:1,xp:0,copies:1,equipment:{}},mira:{level:1,rank:1,xp:0,copies:1,equipment:{}},gorn:{level:1,rank:1,xp:0,copies:1,equipment:{}}},inventory:{wood:0,ore:0,herb:0,core:0,potion:3,energyPotion:0,equipment:{sword:1,armor:1}},tutorialDone:false,sound:true};
 export default{async fetch(req,env){const u=new URL(req.url);try{
-if(u.pathname==="/api/health")return J({ok:true,version:"1.7.7",serverAuthoritative:true,admin:true});
+if(u.pathname==="/api/health")return J({ok:true,version:"1.8",serverAuthoritative:true,admin:true});
 if(u.pathname==="/api/diagnostics/line")return await lineDiagnostics(env,req);
 if(u.pathname==="/auth/line/start")return await startLine(req,env);if(u.pathname==="/auth/line/callback")return await callback(req,env);
 if(u.pathname==="/api/logout"&&req.method==="POST")return await logout(req,env);
@@ -47,9 +47,15 @@ if(u.pathname==="/api/missions"&&req.method==="GET")return missions(env,a);
 if(/^\/api\/missions\/[^/]+\/claim$/.test(u.pathname)&&req.method==="POST")return claimMission(env,a,u.pathname.split("/")[3]);
 if(u.pathname==="/api/mail"&&req.method==="GET")return mailList(env,a);
 if(/^\/api\/mail\/[^/]+\/claim$/.test(u.pathname)&&req.method==="POST")return claimMail(env,a,u.pathname.split("/")[3]);
-if(u.pathname==="/api/arena/status"&&req.method==="GET")return arenaStatus(env,a);
+if(u.pathname==="/api/arena/status"&&req.method==="GET")return arenaStatus(req,env,a);
 if(u.pathname==="/api/arena/defense"&&req.method==="POST")return arenaDefense(req,env,a);
+if(u.pathname==="/api/arena/refresh"&&req.method==="POST")return arenaRefresh(req,env,a);
 if(u.pathname==="/api/arena/challenge"&&req.method==="POST")return arenaChallenge(req,env,a);
+if(u.pathname==="/api/arena/spar"&&req.method==="POST")return arenaSpar(req,env,a);
+if(u.pathname==="/api/arena/friends"&&req.method==="POST")return arenaAddFriend(req,env,a);
+if(u.pathname==="/api/arena/leaderboard"&&req.method==="GET")return arenaLeaderboard(req,env,a);
+if(u.pathname==="/api/arena/rewards"&&req.method==="POST")return arenaClaimReward(req,env,a);
+if(/^\/api\/arena\/replay\/[^/]+$/.test(u.pathname)&&req.method==="GET")return arenaReplay(env,a,u.pathname.split("/")[4]);
 if(u.pathname.startsWith("/media/")&&env.MEDIA){const key=u.pathname.slice(7);const o=await env.MEDIA.get(key);if(!o)return new Response("Not found",{status:404,headers:{"Cache-Control":"no-store"}});const h=new Headers();o.writeHttpMetadata(h);h.set("Content-Type",o.httpMetadata?.contentType||h.get("Content-Type")||"application/octet-stream");h.set("Cache-Control","public, max-age=86400");h.set("X-Content-Type-Options","nosniff");if(o.httpEtag)h.set("ETag",o.httpEtag);return new Response(o.body,{headers:h})}
 return env.ASSETS.fetch(req)}catch(e){console.error("Worker route failed",u.pathname,e);if(u.pathname.startsWith("/auth/line/"))return loginErrorPage(e,req);return u.pathname.startsWith("/api/")?J({error:"SERVER_ERROR",message:safeError(e)},500):new Response("Server Error",{status:500})}}};
 
@@ -192,7 +198,7 @@ async function publicCatalog(env){
     loginRewards:await rows(env,"SELECT * FROM gm_login_rewards WHERE active=1 ORDER BY campaign_key,day_index"),
     announcements:await rows(env,"SELECT * FROM gm_announcements_v2 WHERE active=1 AND (NULLIF(starts_at,'') IS NULL OR starts_at<=?) AND (NULLIF(ends_at,'') IS NULL OR ends_at>?) ORDER BY pinned DESC,priority DESC,created_at DESC",[now,now]),
     banners:await rows(env,"SELECT * FROM gm_banners WHERE active=1 AND (NULLIF(starts_at,'') IS NULL OR starts_at<=?) AND (NULLIF(ends_at,'') IS NULL OR ends_at>?) ORDER BY sort_order,created_at DESC",[now,now]),
-    version:"1.7.7"
+    version:"1.8"
   });
 }
 async function catalogList(env,e){const t=CATALOG_TABLES[e];if(!t)return J({error:"UNKNOWN_ENTITY"},404);return J({rows:await rows(env,`SELECT * FROM ${t} ORDER BY updated_at DESC`)})}
@@ -216,7 +222,7 @@ async function catalogSyncStatus(env){
   const counts={};for(const table of tableNames)counts[table]=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM ${table}`).first())?.count||0);
   const expected={gm_heroes:8,gm_skills:8,gm_equipment:5,gm_items:6,gm_shop_products:7,gm_dungeons:2};
   const missing=Object.entries(expected).filter(([key,value])=>counts[key]<value).map(([key,value])=>({table:key,current:counts[key],expected:value}));
-  return J({ok:missing.length===0,inserted:updated,updated,counts,missing,message:missing.length?"仍有預設資料缺少，請執行 sync-defaults-v1.7.6.sql。":`已補齊 ${updated} 筆預設圖片並修復公告時間欄位。`},missing.length?409:200);
+  return J({ok:missing.length===0,inserted:updated,updated,counts,missing,message:missing.length?"仍有預設資料缺少，請執行 sync-defaults-v1.7.4.sql。":`已補齊 ${updated} 筆預設圖片並修復公告時間欄位。`},missing.length?409:200);
 }
 
 async function summon(req,env,a){const {count}=await req.json();if(![1,10].includes(count))return J({error:"INVALID_COUNT"},400);const s=await stateOf(env,a.id),cost=count===10?900:100;if(s.gems<cost)return J({error:"GEMS_NOT_ENOUGH",message:"GEMS_NOT_ENOUGH"},409);s.gems-=cost;const got=[];for(let i=0;i<count;i++){const r=Math.random(),rarity=r<.05?"傳說":r<.28?"史詩":"稀有",pool=HEROES.filter(x=>x.rarity===rarity),h=pool[Math.floor(Math.random()*pool.length)];got.push(h);if(s.owned[h.id])s.owned[h.id].copies=(s.owned[h.id].copies||1)+1;else s.owned[h.id]={level:1,xp:0,copies:1,equipment:{}}}await save(env,a.id,s);await progress(env,a.id,"summon",count);return J({heroes:got,state:s})}
@@ -234,44 +240,82 @@ function arenaTier(rating){
 function arenaPower(s,team){
   return (team||[]).reduce((total,id)=>{const h=s.owned?.[id];if(!h)return total;const lv=Number(h.level||1),rank=Number(h.rank||1),skill=Number(h.skillLevel||1);return total+Math.round(900+lv*145+rank*230+skill*55)},0)+Number(s.stageUnlocked||1)*50;
 }
+function arenaSeasonKey(){const d=new Date(),y=d.getUTCFullYear(),m=String(d.getUTCMonth()+1).padStart(2,"0");return `${y}-${m}`}
+function arenaWeekKey(){const d=new Date(),first=new Date(Date.UTC(d.getUTCFullYear(),0,1)),days=Math.floor((d-first)/86400000),week=Math.ceil((days+first.getUTCDay()+1)/7);return `${d.getUTCFullYear()}-W${String(week).padStart(2,"0")}`}
 async function ensureArenaProfile(env,a,s){
   let p=await env.DB.prepare("SELECT * FROM arena_profiles WHERE player_id=?").bind(a.id).first();
-  if(!p){await env.DB.prepare("INSERT INTO arena_profiles(player_id,defense_team_json)VALUES(?,?)").bind(a.id,JSON.stringify((s.team||[]).slice(0,3))).run();p=await env.DB.prepare("SELECT * FROM arena_profiles WHERE player_id=?").bind(a.id).first()}
+  if(!p){await env.DB.prepare("INSERT INTO arena_profiles(player_id,defense_team_json,season_key)VALUES(?,?,?)").bind(a.id,JSON.stringify((s.team||[]).slice(0,3)),arenaSeasonKey()).run();p=await env.DB.prepare("SELECT * FROM arena_profiles WHERE player_id=?").bind(a.id).first()}
+  if(p.season_key!==arenaSeasonKey()){
+    await env.DB.prepare("UPDATE arena_profiles SET rating=1000,wins=0,losses=0,current_streak=0,season_key=?,season_high_rating=1000,updated_at=CURRENT_TIMESTAMP WHERE player_id=?").bind(arenaSeasonKey(),a.id).run();
+    p=await env.DB.prepare("SELECT * FROM arena_profiles WHERE player_id=?").bind(a.id).first();
+  }
   return p;
 }
-function arenaProfileJson(p){return{rating:Number(p.rating||1000),tier:arenaTier(Number(p.rating||1000)),arenaCoins:Number(p.arena_coins||0),wins:Number(p.wins||0),losses:Number(p.losses||0),defenseTeam:parse(p.defense_team_json,[])}}
-async function arenaStatus(env,a){
+function arenaProfileJson(p){const wins=Number(p.wins||0),losses=Number(p.losses||0),total=wins+losses;return{rating:Number(p.rating||1000),tier:arenaTier(Number(p.rating||1000)),arenaCoins:Number(p.arena_coins||0),wins,losses,winRate:total?Math.round(wins*1000/total)/10:0,defenseTeam:parse(p.defense_team_json,[]),defenseStrategy:p.defense_strategy||"BALANCED",highestRating:Number(p.highest_rating||p.rating||1000),highestTier:arenaTier(Number(p.highest_rating||p.rating||1000)),currentStreak:Number(p.current_streak||0),bestStreak:Number(p.best_streak||0),seasonKey:p.season_key||arenaSeasonKey()}}
+function arenaStrategyLabel(v){return({BALANCED:"均衡",FOCUS:"優先集火",HEAL:"優先治療"})[v]||"均衡"}
+function arenaRewardDefs(){return{daily:{target:3,reward:{arenaCoins:80,gems:30}},weekly:{target:10,reward:{arenaCoins:300,gems:120}},season:{target:1,reward:{arenaCoins:500,gems:200}}}}
+async function arenaRewardState(env,a,p){
+  const date=taipeiDate(),week=arenaWeekKey(),season=arenaSeasonKey();
+  const dailyBattles=Number((await env.DB.prepare("SELECT COUNT(*) c FROM arena_battles WHERE player_id=? AND date(created_at)=?").bind(a.id,date).first())?.c||0);
+  const weeklyBattles=Number((await env.DB.prepare("SELECT COUNT(*) c FROM arena_battles WHERE player_id=? AND created_at>=datetime('now','-7 days')").bind(a.id).first())?.c||0);
+  const claims=(await env.DB.prepare("SELECT reward_type,period_key FROM arena_reward_claims WHERE player_id=?").bind(a.id).all()).results;
+  const claimed=(type,key)=>claims.some(x=>x.reward_type===type&&x.period_key===key),defs=arenaRewardDefs();
+  return{daily:{progress:dailyBattles,target:defs.daily.target,claimed:claimed('daily',date),reward:defs.daily.reward},weekly:{progress:weeklyBattles,target:defs.weekly.target,claimed:claimed('weekly',week),reward:defs.weekly.reward},season:{progress:1,target:1,claimed:claimed('season',season),reward:{arenaCoins:defs.season.reward.arenaCoins+Math.max(0,Math.floor((Number(p.rating||1000)-1000)/100))*50,gems:defs.season.reward.gems}}};
+}
+async function arenaPickOpponents(env,a,p,s){
+  const myPower=arenaPower(s,(s.team||[]).slice(0,3));
+  const candidates=(await env.DB.prepare(`SELECT p.id,p.display_name,ap.rating,ap.defense_team_json,ap.defense_strategy,gs.state_json
+    FROM players p JOIN arena_profiles ap ON ap.player_id=p.id JOIN game_saves gs ON gs.player_id=p.id
+    WHERE p.id<>? ORDER BY (ABS(ap.rating-?)*4 + ABS(p.stage_unlocked-?)*100) ASC,RANDOM() LIMIT 12`).bind(a.id,p.rating||1000,s.stageUnlocked||1).all()).results;
+  return candidates.map(x=>{const os=parse(x.state_json,structuredClone(DEFAULT_STATE)),team=parse(x.defense_team_json,os.team||[]),power=arenaPower(os,team);return{id:x.id,displayName:x.display_name,rating:Number(x.rating||1000),tier:arenaTier(Number(x.rating||1000)),team,power,strategy:x.defense_strategy||"BALANCED",strategyLabel:arenaStrategyLabel(x.defense_strategy),matchScore:Math.abs(power-myPower)+Math.abs(Number(x.rating||1000)-Number(p.rating||1000))*3}}).sort((x,y)=>x.matchScore-y.matchScore).slice(0,3);
+}
+async function arenaStatus(req,env,a){
   const s=await stateOf(env,a.id),p=await ensureArenaProfile(env,a,s),date=taipeiDate();
   const used=Number((await env.DB.prepare("SELECT used_count FROM arena_daily_attempts WHERE player_id=? AND attempt_date=?").bind(a.id,date).first())?.used_count||0);
-  const candidates=(await env.DB.prepare(`SELECT p.id,p.display_name,ap.rating,ap.defense_team_json,gs.state_json
-    FROM players p JOIN arena_profiles ap ON ap.player_id=p.id JOIN game_saves gs ON gs.player_id=p.id
-    WHERE p.id<>? ORDER BY ABS(ap.rating-?) ASC,RANDOM() LIMIT 3`).bind(a.id,p.rating||1000).all()).results;
-  const opponents=candidates.map(x=>{const os=parse(x.state_json,structuredClone(DEFAULT_STATE)),team=parse(x.defense_team_json,os.team||[]);return{id:x.id,displayName:x.display_name,rating:Number(x.rating||1000),tier:arenaTier(Number(x.rating||1000)),team,power:arenaPower(os,team)}});
-  const logs=(await env.DB.prepare(`SELECT b.result,b.rating_delta,b.created_at,b.opponent_id,p.display_name opponent_name
-    FROM arena_battles b LEFT JOIN players p ON p.id=b.opponent_id WHERE b.player_id=? ORDER BY b.id DESC LIMIT 10`).bind(a.id).all()).results;
-  return J({profile:arenaProfileJson(p),remaining:Math.max(0,5-used),opponents,logs:logs.map(x=>({result:x.result,ratingDelta:Number(x.rating_delta||0),createdAt:x.created_at,opponentName:x.opponent_name||"未知玩家"}))})
+  let opponents=parse(p.opponent_ids_json,[]),rows=[];
+  if(opponents.length){const qs=opponents.map(()=>'?').join(',');rows=(await env.DB.prepare(`SELECT p.id,p.display_name,ap.rating,ap.defense_team_json,ap.defense_strategy,gs.state_json FROM players p JOIN arena_profiles ap ON ap.player_id=p.id JOIN game_saves gs ON gs.player_id=p.id WHERE p.id IN (${qs})`).bind(...opponents).all()).results}
+  if(rows.length<1){const picked=await arenaPickOpponents(env,a,p,s);opponents=picked.map(x=>x.id);await env.DB.prepare("UPDATE arena_profiles SET opponent_ids_json=?,next_free_refresh_at=datetime(CURRENT_TIMESTAMP,'+30 minutes') WHERE player_id=?").bind(JSON.stringify(opponents),a.id).run();rows=picked.map(x=>({...x,state_json:null,defense_team_json:JSON.stringify(x.team),defense_strategy:x.strategy}))}
+  const list=rows.map(x=>{if(x.matchScore!==undefined)return x;const os=parse(x.state_json,structuredClone(DEFAULT_STATE)),team=parse(x.defense_team_json,os.team||[]);return{id:x.id,displayName:x.display_name,rating:Number(x.rating||1000),tier:arenaTier(Number(x.rating||1000)),team,power:arenaPower(os,team),strategy:x.defense_strategy||"BALANCED",strategyLabel:arenaStrategyLabel(x.defense_strategy)}});
+  const logs=(await env.DB.prepare(`SELECT b.battle_key,b.result,b.rating_delta,b.created_at,b.opponent_id,b.battle_type,p.display_name opponent_name
+    FROM arena_battles b LEFT JOIN players p ON p.id=b.opponent_id WHERE b.player_id=? OR b.opponent_id=? ORDER BY b.id DESC LIMIT 20`).bind(a.id,a.id).all()).results;
+  const friends=(await env.DB.prepare(`SELECT p.id,p.display_name FROM arena_friendships f JOIN players p ON p.id=f.friend_player_id WHERE f.player_id=? ORDER BY p.display_name LIMIT 50`).bind(a.id).all()).results;
+  const rewards=await arenaRewardState(env,a,p);
+  return J({profile:arenaProfileJson(p),remaining:Math.max(0,5-used),opponents:list,logs:logs.map(x=>({id:x.battle_key||String(x.id),result:x.opponent_id===a.id?(x.result==="WIN"?"LOSE":"WIN"):x.result,ratingDelta:x.opponent_id===a.id?-Number(x.rating_delta||0):Number(x.rating_delta||0),createdAt:x.created_at,opponentName:x.opponent_name||"未知玩家",battleType:x.battle_type||"RANKED",wasDefense:x.opponent_id===a.id})),friends,rewards,nextFreeRefreshAt:p.next_free_refresh_at||null,refreshGemCost:20})
 }
 async function arenaDefense(req,env,a){
-  const b=await req.json(),s=await stateOf(env,a.id),team=Array.isArray(b.team)?b.team.filter(id=>s.owned?.[id]).slice(0,3):[];
+  const b=await req.json(),s=await stateOf(env,a.id),team=Array.isArray(b.team)?b.team.filter(id=>s.owned?.[id]).slice(0,3):[],strategy=["BALANCED","FOCUS","HEAL"].includes(b.strategy)?b.strategy:"BALANCED";
   if(team.length<1)return J({error:"ARENA_TEAM_REQUIRED"},400);await ensureArenaProfile(env,a,s);
-  await env.DB.prepare("UPDATE arena_profiles SET defense_team_json=?,updated_at=CURRENT_TIMESTAMP WHERE player_id=?").bind(JSON.stringify(team),a.id).run();
+  await env.DB.prepare("UPDATE arena_profiles SET defense_team_json=?,defense_strategy=?,updated_at=CURRENT_TIMESTAMP WHERE player_id=?").bind(JSON.stringify(team),strategy,a.id).run();
   const p=await env.DB.prepare("SELECT * FROM arena_profiles WHERE player_id=?").bind(a.id).first();return J({ok:true,profile:arenaProfileJson(p)})
+}
+async function arenaRefresh(req,env,a){
+  const b=await req.json().catch(()=>({})),s=await stateOf(env,a.id),p=await ensureArenaProfile(env,a,s),freeAt=p.next_free_refresh_at?new Date(p.next_free_refresh_at):new Date(0),free=Date.now()>=freeAt.getTime();
+  if(!free){if(!b.useGems)return J({error:"ARENA_REFRESH_COOLDOWN",nextFreeRefreshAt:p.next_free_refresh_at,gemCost:20},409);if(s.gems<20)return J({error:"GEMS_NOT_ENOUGH"},409);s.gems-=20;await save(env,a.id,s)}
+  const picked=await arenaPickOpponents(env,a,p,s);await env.DB.prepare("UPDATE arena_profiles SET opponent_ids_json=?,next_free_refresh_at=datetime(CURRENT_TIMESTAMP,'+30 minutes'),updated_at=CURRENT_TIMESTAMP WHERE player_id=?").bind(JSON.stringify(picked.map(x=>x.id)),a.id).run();return J({opponents:picked,nextFreeRefreshAt:new Date(Date.now()+1800000).toISOString(),state:s,paid:!free})
+}
+function arenaReplayTurns(myTeam,enemyTeam,myPower,enemyPower,myStrategy,enemyStrategy,win){
+  const turns=[],rounds=6;for(let i=0;i<rounds;i++){const mine=i%2===0,team=mine?myTeam:enemyTeam,target=mine?enemyTeam:myTeam,actor=team[i%Math.max(1,team.length)]||"aria",victim=target[(i+1)%Math.max(1,target.length)]||"gorn",base=Math.round((mine?myPower:enemyPower)/Math.max(1,team.length)/8),strategy=mine?myStrategy:enemyStrategy;turns.push({round:i+1,side:mine?"ATTACKER":"DEFENDER",actor,target:victim,action:strategy==="HEAL"&&i%3===1?"HEAL":strategy==="FOCUS"?"FOCUS_ATTACK":"ATTACK",value:strategy==="HEAL"&&i%3===1?Math.round(base*.55):Math.round(base*(.85+Math.random()*.3))})}turns.push({round:rounds+1,side:"SYSTEM",action:"RESULT",result:win?"WIN":"LOSE"});return turns;
 }
 async function arenaChallenge(req,env,a){
   const {opponentId}=await req.json();if(!opponentId||opponentId===a.id)return J({error:"INVALID_OPPONENT"},400);
   const date=taipeiDate(),s=await stateOf(env,a.id),p=await ensureArenaProfile(env,a,s),daily=await env.DB.prepare("SELECT used_count FROM arena_daily_attempts WHERE player_id=? AND attempt_date=?").bind(a.id,date).first();
   if(Number(daily?.used_count||0)>=5)return J({error:"ARENA_DAILY_LIMIT",message:"ARENA_DAILY_LIMIT"},409);
-  const o=await env.DB.prepare(`SELECT p.display_name,ap.rating,ap.defense_team_json,gs.state_json FROM players p JOIN arena_profiles ap ON ap.player_id=p.id JOIN game_saves gs ON gs.player_id=p.id WHERE p.id=?`).bind(opponentId).first();
-  if(!o)return J({error:"OPPONENT_NOT_FOUND"},404);
-  const os=parse(o.state_json,structuredClone(DEFAULT_STATE)),myTeam=(s.team||[]).slice(0,3),enemyTeam=parse(o.defense_team_json,os.team||[]),myPower=arenaPower(s,myTeam),enemyPower=arenaPower(os,enemyTeam);
-  const chance=Math.max(.18,Math.min(.82,.5+(myPower-enemyPower)/Math.max(1800,myPower+enemyPower))),win=Math.random()<chance,result=win?"WIN":"LOSE",ratingDelta=win?25:-15,coins=win?30:10,newRating=Math.max(0,Number(p.rating||1000)+ratingDelta);
-  await env.DB.batch([
+  const o=await env.DB.prepare(`SELECT p.display_name,ap.rating,ap.defense_team_json,ap.defense_strategy,gs.state_json FROM players p JOIN arena_profiles ap ON ap.player_id=p.id JOIN game_saves gs ON gs.player_id=p.id WHERE p.id=?`).bind(opponentId).first();if(!o)return J({error:"OPPONENT_NOT_FOUND"},404);
+  const os=parse(o.state_json,structuredClone(DEFAULT_STATE)),myTeam=(s.team||[]).slice(0,3),enemyTeam=parse(o.defense_team_json,os.team||[]),myPower=arenaPower(s,myTeam),enemyPower=arenaPower(os,enemyTeam),myStrategy="BALANCED",enemyStrategy=o.defense_strategy||"BALANCED";
+  const strategyBonus=enemyStrategy==="FOCUS"?0.025:enemyStrategy==="HEAL"?-0.015:0,chance=Math.max(.15,Math.min(.85,.5+(myPower-enemyPower)/Math.max(1800,myPower+enemyPower)-strategyBonus)),win=Math.random()<chance,result=win?"WIN":"LOSE",ratingDelta=win?25:-15,coins=win?30:10,newRating=Math.max(0,Number(p.rating||1000)+ratingDelta),streak=win?Number(p.current_streak||0)+1:0,high=Math.max(Number(p.highest_rating||1000),newRating),seasonHigh=Math.max(Number(p.season_high_rating||1000),newRating),replay=arenaReplayTurns(myTeam,enemyTeam,myPower,enemyPower,myStrategy,enemyStrategy,win);
+  const opponentNewRating=Math.max(0,Number(o.rating||1000)-ratingDelta),opponentStreak=win?0:1;
+  const battleId=crypto.randomUUID();await env.DB.batch([
     env.DB.prepare(`INSERT INTO arena_daily_attempts(player_id,attempt_date,used_count)VALUES(?,?,1) ON CONFLICT(player_id,attempt_date) DO UPDATE SET used_count=used_count+1`).bind(a.id,date),
-    env.DB.prepare("UPDATE arena_profiles SET rating=?,arena_coins=arena_coins+?,wins=wins+?,losses=losses+?,updated_at=CURRENT_TIMESTAMP WHERE player_id=?").bind(newRating,coins,win?1:0,win?0:1,a.id),
-    env.DB.prepare("INSERT INTO arena_battles(player_id,opponent_id,result,rating_delta,player_power,opponent_power,reward_json)VALUES(?,?,?,?,?,?,?)").bind(a.id,opponentId,result,ratingDelta,myPower,enemyPower,JSON.stringify({arenaCoins:coins}))
-  ]);
-  return J({result,ratingDelta,arenaCoinsEarned:coins,playerPower:myPower,opponentPower:enemyPower,state:s})
+    env.DB.prepare("UPDATE arena_profiles SET rating=?,arena_coins=arena_coins+?,wins=wins+?,losses=losses+?,current_streak=?,best_streak=MAX(best_streak,?),highest_rating=?,season_high_rating=?,updated_at=CURRENT_TIMESTAMP WHERE player_id=?").bind(newRating,coins,win?1:0,win?0:1,streak,streak,high,seasonHigh,a.id),
+    env.DB.prepare("UPDATE arena_profiles SET rating=?,wins=wins+?,losses=losses+?,current_streak=?,best_streak=MAX(best_streak,?),highest_rating=MAX(highest_rating,?),season_high_rating=MAX(season_high_rating,?),updated_at=CURRENT_TIMESTAMP WHERE player_id=?").bind(opponentNewRating,win?0:1,win?1:0,opponentStreak,opponentStreak,opponentNewRating,opponentNewRating,opponentId),
+    env.DB.prepare("INSERT INTO arena_battles(battle_key,player_id,opponent_id,result,rating_delta,player_power,opponent_power,reward_json,replay_json,battle_type)VALUES(?,?,?,?,?,?,?,?,?,?)").bind(battleId,a.id,opponentId,result,ratingDelta,myPower,enemyPower,JSON.stringify({arenaCoins:coins}),JSON.stringify(replay),"RANKED")
+  ]);return J({battleId,result,ratingDelta,arenaCoinsEarned:coins,playerPower:myPower,opponentPower:enemyPower,state:s,replay})
 }
+async function arenaSpar(req,env,a){const {targetPlayerId}=await req.json();if(!targetPlayerId||targetPlayerId===a.id)return J({error:"INVALID_OPPONENT"},400);const s=await stateOf(env,a.id),o=await env.DB.prepare(`SELECT p.display_name,ap.defense_team_json,ap.defense_strategy,gs.state_json FROM players p JOIN arena_profiles ap ON ap.player_id=p.id JOIN game_saves gs ON gs.player_id=p.id WHERE p.id=?`).bind(targetPlayerId).first();if(!o)return J({error:"OPPONENT_NOT_FOUND"},404);const os=parse(o.state_json,structuredClone(DEFAULT_STATE)),myTeam=(s.team||[]).slice(0,3),enemyTeam=parse(o.defense_team_json,os.team||[]),myPower=arenaPower(s,myTeam),enemyPower=arenaPower(os,enemyTeam),win=Math.random()<Math.max(.15,Math.min(.85,.5+(myPower-enemyPower)/Math.max(1800,myPower+enemyPower))),result=win?"WIN":"LOSE",replay=arenaReplayTurns(myTeam,enemyTeam,myPower,enemyPower,"BALANCED",o.defense_strategy||"BALANCED",win),id=crypto.randomUUID();await env.DB.prepare("INSERT INTO arena_battles(battle_key,player_id,opponent_id,result,rating_delta,player_power,opponent_power,reward_json,replay_json,battle_type)VALUES(?,?,?,?,0,?,?,?,?,'SPAR')").bind(id,a.id,targetPlayerId,result,myPower,enemyPower,"{}",JSON.stringify(replay)).run();return J({battleId:id,result,playerPower:myPower,opponentPower:enemyPower,replay})}
+async function arenaAddFriend(req,env,a){const {friendPlayerId}=await req.json();if(!friendPlayerId||friendPlayerId===a.id)return J({error:"INVALID_FRIEND"},400);if(!await env.DB.prepare("SELECT 1 x FROM players WHERE id=?").bind(friendPlayerId).first())return J({error:"PLAYER_NOT_FOUND"},404);await env.DB.batch([env.DB.prepare("INSERT OR IGNORE INTO arena_friendships(player_id,friend_player_id)VALUES(?,?)").bind(a.id,friendPlayerId),env.DB.prepare("INSERT OR IGNORE INTO arena_friendships(player_id,friend_player_id)VALUES(?,?)").bind(friendPlayerId,a.id)]);return J({ok:true})}
+async function arenaLeaderboard(req,env,a){const scope=new URL(req.url).searchParams.get('scope')||'global';let sql=`SELECT p.id,p.display_name,ap.rating,ap.wins,ap.losses,ap.highest_rating FROM arena_profiles ap JOIN players p ON p.id=ap.player_id`,bind=[];if(scope==='friends'){sql+=` WHERE p.id IN (SELECT friend_player_id FROM arena_friendships WHERE player_id=?)`;bind=[a.id]}else if(scope==='guild'){const me=await env.DB.prepare("SELECT guild_id FROM arena_profiles WHERE player_id=?").bind(a.id).first();if(!me?.guild_id)return J({scope,rows:[],message:"尚未加入公會"});sql+=` WHERE ap.guild_id=?`;bind=[me.guild_id]}sql+=` ORDER BY ap.rating DESC,ap.wins DESC LIMIT 100`;const rows=(await env.DB.prepare(sql).bind(...bind).all()).results;return J({scope,rows:rows.map((x,i)=>({rank:i+1,id:x.id,displayName:x.display_name,rating:Number(x.rating||1000),tier:arenaTier(Number(x.rating||1000)),wins:Number(x.wins||0),losses:Number(x.losses||0),highestTier:arenaTier(Number(x.highest_rating||x.rating||1000)),isMe:x.id===a.id}))})}
+async function arenaReplay(env,a,id){const b=await env.DB.prepare("SELECT * FROM arena_battles WHERE (battle_key=? OR CAST(id AS TEXT)=?) AND (player_id=? OR opponent_id=?)").bind(id,id,a.id,a.id).first();if(!b)return J({error:"NOT_FOUND"},404);return J({id:b.battle_key||String(b.id),result:b.result,battleType:b.battle_type||"RANKED",replay:parse(b.replay_json,[])})}
+async function arenaClaimReward(req,env,a){const {type}=await req.json(),s=await stateOf(env,a.id),p=await ensureArenaProfile(env,a,s),states=await arenaRewardState(env,a,p),r=states[type];if(!r)return J({error:"INVALID_REWARD"},400);if(r.claimed||r.progress<r.target)return J({error:"NOT_CLAIMABLE"},409);const key=type==='daily'?taipeiDate():type==='weekly'?arenaWeekKey():arenaSeasonKey();await env.DB.prepare("INSERT INTO arena_reward_claims(player_id,reward_type,period_key,reward_json)VALUES(?,?,?,?)").bind(a.id,type,key,JSON.stringify(r.reward)).run();if(r.reward.gems)s.gems+=r.reward.gems;await save(env,a.id,s);await env.DB.prepare("UPDATE arena_profiles SET arena_coins=arena_coins+? WHERE player_id=?").bind(Number(r.reward.arenaCoins||0),a.id).run();return J({ok:true,reward:r.reward,state:s})}
 
 async function leaderboard(req,env){const me=await auth(req,env),rows=(await env.DB.prepare("SELECT p.id,p.display_name,p.stage_unlocked,COALESCE(SUM(CASE WHEN b.result='WIN' THEN 1 ELSE 0 END),0) wins FROM players p LEFT JOIN battle_records b ON b.player_id=p.id GROUP BY p.id ORDER BY p.stage_unlocked DESC,wins DESC,p.created_at ASC LIMIT 100").all()).results;return J({rows:rows.map(x=>({displayName:x.display_name,stageUnlocked:x.stage_unlocked,wins:x.wins,power:x.stage_unlocked*1000+x.wins*100,isMe:me?.id===x.id}))})}
 
@@ -394,7 +438,7 @@ function getCookie(r,n){for(const x of (r.headers.get("Cookie")||"").split(";"))
 function cookie(n,v,age){return`${n}=${v}; Path=/; Max-Age=${age}; HttpOnly; Secure; SameSite=Strict`}
 
 async function lineDiagnostics(env,req){
- const result={ok:true,version:"1.7.7",origin:new URL(req.url).origin,checks:{lineChannelId:!!env.LINE_CHANNEL_ID,lineChannelSecret:!!env.LINE_CHANNEL_SECRET,d1Binding:!!env.DB,oauthStatesTable:false}};
+ const result={ok:true,version:"1.8",origin:new URL(req.url).origin,checks:{lineChannelId:!!env.LINE_CHANNEL_ID,lineChannelSecret:!!env.LINE_CHANNEL_SECRET,d1Binding:!!env.DB,oauthStatesTable:false}};
  if(env.DB){try{await env.DB.prepare("SELECT state FROM oauth_states LIMIT 1").first();result.checks.oauthStatesTable=true}catch(e){result.ok=false;result.databaseError=safeError(e)}}
  if(!result.checks.lineChannelId||!result.checks.lineChannelSecret||!result.checks.d1Binding||!result.checks.oauthStatesTable)result.ok=false;
  result.callbackUrl=result.origin+"/auth/line/callback";

@@ -5,10 +5,12 @@ const source = fs.readFileSync(path, 'utf8');
 const required = [
   'adminRoutes','leaderboard','summon','daily','battleStart','battleSettle',
   'missions','claimMission','mailList','claimMail','publicCatalog',
-  'catalogList','catalogSave','catalogDelete','mediaUpload'
+  'catalogList','catalogSave','catalogDelete','mediaUpload',
+  'arenaStatus','arenaDefense','arenaRefresh','arenaChallenge','arenaSpar',
+  'arenaAddFriend','arenaLeaderboard','arenaReplay','arenaClaimReward'
 ];
 const missing = required.filter(name => !new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`).test(source));
-const requiredRoutes = ['/api/catalog','/api/leaderboard','/api/summon','/api/admin/players'];
+const requiredRoutes = ['/api/catalog','/api/leaderboard','/api/summon','/api/admin/players','/api/arena/status','/api/arena/refresh','/api/arena/leaderboard'];
 const missingRoutes = requiredRoutes.filter(route => !source.includes(route));
 if (missing.length || missingRoutes.length) {
   console.error('Worker integrity check failed.');

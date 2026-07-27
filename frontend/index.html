@@ -193,21 +193,32 @@
       <section id="arenaPage" class="page">
         <div class="page-head"><button class="back" data-go="homePage">←</button><div><div class="eyebrow">ASYNC ARENA</div><h2>星界競技場</h2></div></div>
         <div class="arena-hero">
-          <div><span class="chapter-badge">SEASON 1</span><h3 id="arenaTier">青銅 III</h3><p>由伺服器控制對手的防守隊伍，不需同時在線。</p></div>
+          <div><span class="chapter-badge" id="arenaSeason">SEASON</span><h3 id="arenaTier">青銅 III</h3><p>離線也能被挑戰；對手會使用已儲存的防守隊伍與 AI 策略。</p></div>
           <div class="arena-rating"><small>競技積分</small><b id="arenaRating">1000</b><span>🪙 <i id="arenaCoins">0</i> 競技幣</span></div>
         </div>
-        <div class="arena-summary">
+        <div class="arena-summary arena-summary-extended">
           <div><small>今日剩餘挑戰</small><b id="arenaRemaining">5 / 5</b></div>
-          <div><small>本季勝場</small><b id="arenaWins">0</b></div>
-          <div><small>本季敗場</small><b id="arenaLosses">0</b></div>
+          <div><small>本季勝／敗</small><b><i id="arenaWins">0</i> / <i id="arenaLosses">0</i></b></div>
+          <div><small>勝率</small><b id="arenaWinRate">0%</b></div>
+          <div><small>最高段位</small><b id="arenaHighestTier">青銅 III</b></div>
+          <div><small>目前／最佳連勝</small><b><i id="arenaStreak">0</i> / <i id="arenaBestStreak">0</i></b></div>
         </div>
-        <div class="section-title"><h3>防守隊伍</h3><button class="secondary" id="saveArenaDefense">儲存目前隊伍</button></div>
+        <div class="section-title"><h3>每日／每週／賽季獎勵</h3></div>
+        <div id="arenaRewards" class="arena-rewards"></div>
+        <div class="section-title"><h3>獨立防守隊伍</h3><button class="secondary" id="saveArenaDefense">儲存防守設定</button></div>
+        <div class="arena-defense-controls"><select id="arenaDefenseStrategy"><option value="BALANCED">均衡</option><option value="FOCUS">優先集火</option><option value="HEAL">優先治療</option></select><small>防守隊伍不會影響冒險推圖隊伍。</small></div>
         <div id="arenaDefense" class="arena-defense"></div>
-        <div class="section-title"><h3>可挑戰對手</h3><button class="text-btn" id="refreshArena">重新配對</button></div>
+        <div class="section-title"><h3>MMR 配對對手</h3><button class="text-btn" id="refreshArena">刷新對手</button></div>
+        <div id="arenaRefreshNote" class="server-note"></div>
         <div id="arenaOpponents" class="arena-opponents"></div>
-        <div class="section-title"><h3>最近戰鬥紀錄</h3></div>
+        <div class="section-title"><h3>好友切磋</h3></div>
+        <div class="arena-friend-tools"><input id="arenaFriendId" placeholder="輸入好友玩家 ID"><button class="secondary" id="addArenaFriend">加入好友</button><button class="primary" id="sparArenaFriend">立即切磋</button></div>
+        <div id="arenaFriends" class="arena-friends"></div>
+        <div class="section-title"><h3>競技排行榜</h3><div class="gm-actions"><button class="text-btn active" data-arena-rank="global">全服</button><button class="text-btn" data-arena-rank="friends">好友</button><button class="text-btn" data-arena-rank="guild">公會</button></div></div>
+        <div id="arenaLeaderboard" class="ranking-list"></div>
+        <div class="section-title"><h3>最近戰鬥與回放</h3></div>
         <div id="arenaLogs" class="ranking-list"></div>
-        <div class="info-box">每日提供 5 次免費挑戰。勝利獲得積分與競技幣；賽季段位與獎勵將在後續版本擴充。</div>
+        <div id="arenaReplay" class="arena-replay hidden"></div>
       </section>
 
       <section id="rankingPage" class="page">

@@ -44,7 +44,7 @@ CREATE TABLE sessions (
   FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
 );
 INSERT INTO "sessions" ("id","player_id","token_hash","expires_at","user_agent","created_at") VALUES('fb716f18-9f65-45ef-8f3d-c425e1f6f71c','30139025-5317-4dd0-9137-f843d173dd5a','fa5f9eb0a8dfea6e0fdca4fb212d7ea9344beb594723b8350bcf0a176c0a6a86','2026-08-26T06:30:49.697Z','','2026-07-27 06:30:49');
-INSERT INTO "sessions" ("id","player_id","token_hash","expires_at","user_agent","created_at") VALUES('e31299e1-c3bb-4916-8a93-d7f6c5c97f79','30139025-5317-4dd0-9137-f843d173dd5a','f19b94b73e92342d9c37464f3f074ce1ba2200e465271f0abdd4534ccc7d78fc','2026-08-26T11:38:14.253Z','','2026-07-27 11:38:14');
+INSERT INTO "sessions" ("id","player_id","token_hash","expires_at","user_agent","created_at") VALUES('f093f1e9-2d0d-4a73-af13-cf1080459feb','30139025-5317-4dd0-9137-f843d173dd5a','ffdf77112e71cd09c468c6ba07a74bb667d08a6907284f2b499b8bf10207b0cf','2026-08-26T12:14:32.726Z','','2026-07-27 12:14:32');
 CREATE TABLE oauth_states (
   state TEXT PRIMARY KEY,
   nonce TEXT NOT NULL,
@@ -301,7 +301,7 @@ CREATE TABLE player_runtime (
   last_energy_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE
 );
-INSERT INTO "player_runtime" ("player_id","last_energy_at") VALUES('30139025-5317-4dd0-9137-f843d173dd5a','2026-07-27 12:03:16');
+INSERT INTO "player_runtime" ("player_id","last_energy_at") VALUES('30139025-5317-4dd0-9137-f843d173dd5a','2026-07-27 12:14:50');
 CREATE TABLE gm_heroes(id TEXT PRIMARY KEY,name TEXT NOT NULL,rarity TEXT NOT NULL DEFAULT '稀有',element TEXT NOT NULL DEFAULT '',hero_class TEXT NOT NULL DEFAULT '',description TEXT NOT NULL DEFAULT '',image_url TEXT NOT NULL DEFAULT '',base_hp INTEGER NOT NULL DEFAULT 300,base_atk INTEGER NOT NULL DEFAULT 80,base_def INTEGER NOT NULL DEFAULT 0,upgrade_base_cost INTEGER NOT NULL DEFAULT 150,upgrade_multiplier REAL NOT NULL DEFAULT 1,max_level INTEGER NOT NULL DEFAULT 100,active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 INSERT INTO "gm_heroes" ("id","name","rarity","element","hero_class","description","image_url","base_hp","base_atk","base_def","upgrade_base_cost","upgrade_multiplier","max_level","active","created_at","updated_at") VALUES('aria','烈焰劍士・亞莉雅','稀有','火','戰士','前排劍士','/assets/heroes/aria.svg',360,104,18,150,1,100,1,'2026-07-27 07:45:01','2026-07-27 11:25:09');
 INSERT INTO "gm_heroes" ("id","name","rarity","element","hero_class","description","image_url","base_hp","base_atk","base_def","upgrade_base_cost","upgrade_multiplier","max_level","active","created_at","updated_at") VALUES('mira','冰霜法師・米菈','史詩','水','法師','冰霜法師','/assets/heroes/mira.svg',390,118,10,150,1,100,1,'2026-07-27 07:45:01','2026-07-27 11:25:09');
@@ -382,6 +382,37 @@ CREATE TABLE gm_default_sync_log (
   synced_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 INSERT INTO "gm_default_sync_log" ("sync_key","synced_at") VALUES('defaults-v1.7.2','2026-07-27 08:07:41');
+CREATE TABLE arena_profiles (
+  player_id TEXT PRIMARY KEY,
+  rating INTEGER NOT NULL DEFAULT 1000,
+  arena_coins INTEGER NOT NULL DEFAULT 0,
+  wins INTEGER NOT NULL DEFAULT 0,
+  losses INTEGER NOT NULL DEFAULT 0,
+  defense_team_json TEXT NOT NULL DEFAULT '[]',
+  season_key TEXT NOT NULL DEFAULT 'season-1',
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE
+);
+INSERT INTO "arena_profiles" ("player_id","rating","arena_coins","wins","losses","defense_team_json","season_key","updated_at") VALUES('30139025-5317-4dd0-9137-f843d173dd5a',1000,0,0,0,'["aria","mira","gorn"]','season-1','2026-07-27 12:14:50');
+CREATE TABLE arena_daily_attempts (
+  player_id TEXT NOT NULL,
+  attempt_date TEXT NOT NULL,
+  used_count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY(player_id,attempt_date),
+  FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE
+);
+CREATE TABLE arena_battles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  player_id TEXT NOT NULL,
+  opponent_id TEXT NOT NULL,
+  result TEXT NOT NULL CHECK(result IN ('WIN','LOSE')),
+  rating_delta INTEGER NOT NULL DEFAULT 0,
+  player_power INTEGER NOT NULL DEFAULT 0,
+  opponent_power INTEGER NOT NULL DEFAULT 0,
+  reward_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE
+);
 DELETE FROM sqlite_sequence;
 INSERT INTO "sqlite_sequence" ("name","seq") VALUES('admin_logs',6);
 INSERT INTO "sqlite_sequence" ("name","seq") VALUES('shop_transactions',8);
@@ -409,3 +440,5 @@ CREATE INDEX idx_dungeon_daily ON dungeon_records(player_id,dungeon_id,clear_dat
 CREATE INDEX idx_event_stage_player ON event_stage_records(player_id,created_at DESC);
 CREATE INDEX idx_gm_announcements_v2_live
 ON gm_announcements_v2(active,priority,starts_at,ends_at);
+CREATE INDEX idx_arena_rating ON arena_profiles(rating DESC);
+CREATE INDEX idx_arena_battles_player ON arena_battles(player_id,created_at DESC);

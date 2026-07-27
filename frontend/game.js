@@ -588,63 +588,20 @@ document.addEventListener("click",e=>{
 loadPublicCatalog();
 
 
-// v1.7.7 非同步競技場
-let ARENA_DATA=null;
-function arenaHeroBadge(id){
-  const h=HEROES.find(x=>x.id===id);
-  if(!h)return `<span class="arena-hero-chip">✨ 未知英雄</span>`;
-  return `<span class="arena-hero-chip">${h.emoji||"✨"} ${escapeHtml(h.name)}</span>`;
-}
-async function loadArena(){
-  if(!window.arenaOpponents)return;
-  if(!CloudAccount.user){
-    arenaOpponents.innerHTML='<div class="info-box">星界競技場需要使用 LINE 登入，才能保存積分與戰鬥紀錄。</div>';
-    arenaLogs.innerHTML='';
-    return;
-  }
-  arenaOpponents.innerHTML='<div class="info-box">正在搜尋對手…</div>';
-  try{
-    ARENA_DATA=await api('/api/arena/status');
-    renderArena();
-  }catch(e){
-    arenaOpponents.innerHTML=`<div class="info-box">競技場讀取失敗：${escapeHtml(e.message)}</div>`;
-  }
-}
-function renderArena(){
-  if(!ARENA_DATA)return;
-  const p=ARENA_DATA.profile||{};
-  arenaTier.textContent=p.tier||'青銅 III';
-  arenaRating.textContent=p.rating||1000;
-  arenaCoins.textContent=p.arenaCoins||0;
-  arenaRemaining.textContent=`${ARENA_DATA.remaining??0} / 5`;
-  arenaWins.textContent=p.wins||0;
-  arenaLosses.textContent=p.losses||0;
-  const defense=Array.isArray(p.defenseTeam)&&p.defenseTeam.length?p.defenseTeam:state.team;
-  arenaDefense.innerHTML=defense.map(arenaHeroBadge).join('');
-  const opponents=ARENA_DATA.opponents||[];
-  arenaOpponents.innerHTML=opponents.length?opponents.map(o=>`<article class="arena-opponent">
-    <div class="arena-opponent-head"><div><b>${escapeHtml(o.displayName)}</b><small>${escapeHtml(o.tier)}・積分 ${o.rating}</small></div><strong>戰力 ${o.power}</strong></div>
-    <div class="arena-team">${(o.team||[]).map(arenaHeroBadge).join('')}</div>
-    <button class="primary" data-arena-challenge="${o.id}" ${(ARENA_DATA.remaining||0)<=0?'disabled':''}>挑戰</button>
-  </article>`).join(''):'<div class="info-box">目前沒有可挑戰的其他玩家。等待更多玩家加入後再試一次。</div>';
-  arenaLogs.innerHTML=(ARENA_DATA.logs||[]).length?ARENA_DATA.logs.map(x=>`<div class="ranking-row ${x.result==='WIN'?'arena-win':'arena-lose'}"><div class="rank">${x.result==='WIN'?'勝':'敗'}</div><div class="grow"><b>${escapeHtml(x.opponentName||'未知玩家')}</b><small style="display:block">${formatAnnouncementDate(x.createdAt)}・積分 ${x.ratingDelta>=0?'+':''}${x.ratingDelta}</small></div><strong>${x.result==='WIN'?'+30':'+10'} 幣</strong></div>`).join(''):'<div class="info-box">尚無競技場戰鬥紀錄。</div>';
-}
-async function saveArenaDefenseTeam(){
-  if(!CloudAccount.user)return toast('請先使用 LINE 登入');
-  try{
-    const r=await api('/api/arena/defense',{method:'POST',body:JSON.stringify({team:state.team})});
-    ARENA_DATA.profile=r.profile;renderArena();toast('防守隊伍已儲存');
-  }catch(e){toast('儲存失敗：'+e.message)}
-}
-async function challengeArena(opponentId){
-  if(!CloudAccount.user)return toast('請先使用 LINE 登入');
-  try{
-    const r=await api('/api/arena/challenge',{method:'POST',body:JSON.stringify({opponentId})});
-    state=r.state||state;localStorage.setItem('starRealmRpgSave',JSON.stringify(state));
-    modal(r.result==='WIN'?'🏆':'⚔️',r.result==='WIN'?'競技勝利':'挑戰失敗',`${r.result==='WIN'?'獲得':'仍獲得'} ${r.arenaCoinsEarned} 競技幣，積分 ${r.ratingDelta>=0?'+':''}${r.ratingDelta}。`);
-    await loadArena();renderAll();
-  }catch(e){toast(e.message==='ARENA_DAILY_LIMIT'?'今日挑戰次數已用完':'挑戰失敗：'+e.message)}
-}
-if(window.saveArenaDefense)saveArenaDefense.onclick=saveArenaDefenseTeam;
-if(window.refreshArena)refreshArena.onclick=loadArena;
-document.addEventListener('click',e=>{const b=e.target.closest('[data-arena-challenge]');if(b)challengeArena(b.dataset.arenaChallenge)});
+// v1.8 完整非同步競技場
+let ARENA_DATA=null,ARENA_RANK_SCOPE='global';
+function arenaHeroBadge(id){const h=HEROES.find(x=>x.id===id);return h?`<span class="arena-hero-chip">${h.emoji||"✨"} ${escapeHtml(h.name)}</span>`:`<span class="arena-hero-chip">✨ 未知英雄</span>`}
+function arenaRewardCard(type,label,data){const ready=data&&!data.claimed&&data.progress>=data.target;return `<article class="arena-reward-card"><b>${label}</b><small>${data?.progress||0} / ${data?.target||0}</small><p>💎 ${data?.reward?.gems||0}　🪙 ${data?.reward?.arenaCoins||0}</p><button class="secondary" data-arena-reward="${type}" ${ready?'':'disabled'}>${data?.claimed?'已領取':ready?'領取':'尚未達成'}</button></article>`}
+async function loadArena(){if(!window.arenaOpponents)return;if(!CloudAccount.user){arenaOpponents.innerHTML='<div class="info-box">星界競技場需要使用 LINE 登入。</div>';return}arenaOpponents.innerHTML='<div class="info-box">正在搜尋對手…</div>';try{ARENA_DATA=await api('/api/arena/status');renderArena();loadArenaLeaderboard(ARENA_RANK_SCOPE)}catch(e){arenaOpponents.innerHTML=`<div class="info-box">競技場讀取失敗：${escapeHtml(e.message)}</div>`}}
+function renderArena(){if(!ARENA_DATA)return;const p=ARENA_DATA.profile||{};arenaTier.textContent=p.tier||'青銅 III';arenaRating.textContent=p.rating||1000;arenaCoins.textContent=p.arenaCoins||0;arenaRemaining.textContent=`${ARENA_DATA.remaining??0} / 5`;arenaWins.textContent=p.wins||0;arenaLosses.textContent=p.losses||0;arenaWinRate.textContent=`${p.winRate||0}%`;arenaHighestTier.textContent=p.highestTier||p.tier||'青銅 III';arenaStreak.textContent=p.currentStreak||0;arenaBestStreak.textContent=p.bestStreak||0;arenaSeason.textContent=p.seasonKey||'SEASON';arenaDefenseStrategy.value=p.defenseStrategy||'BALANCED';const defense=Array.isArray(p.defenseTeam)&&p.defenseTeam.length?p.defenseTeam:state.team;arenaDefense.innerHTML=defense.map(arenaHeroBadge).join('');const rewards=ARENA_DATA.rewards||{};arenaRewards.innerHTML=arenaRewardCard('daily','每日獎勵',rewards.daily)+arenaRewardCard('weekly','每週獎勵',rewards.weekly)+arenaRewardCard('season','賽季獎勵',rewards.season);const when=ARENA_DATA.nextFreeRefreshAt?formatAnnouncementDate(ARENA_DATA.nextFreeRefreshAt):'現在';arenaRefreshNote.textContent=`免費刷新時間：${when}；冷卻中可花費 ${ARENA_DATA.refreshGemCost||20} 鑽石刷新。`;const opponents=ARENA_DATA.opponents||[];arenaOpponents.innerHTML=opponents.length?opponents.map(o=>`<article class="arena-opponent"><div class="arena-opponent-head"><div><b>${escapeHtml(o.displayName)}</b><small>${escapeHtml(o.tier)}・積分 ${o.rating}・AI ${escapeHtml(o.strategyLabel||'均衡')}</small></div><strong>戰力 ${o.power}</strong></div><div class="arena-team">${(o.team||[]).map(arenaHeroBadge).join('')}</div><button class="primary" data-arena-challenge="${o.id}" ${(ARENA_DATA.remaining||0)<=0?'disabled':''}>挑戰</button></article>`).join(''):'<div class="info-box">目前沒有可挑戰的其他玩家。</div>';const friends=ARENA_DATA.friends||[];arenaFriends.innerHTML=friends.length?friends.map(f=>`<button class="secondary" data-arena-friend="${f.id}">${escapeHtml(f.display_name||f.displayName||f.id)}</button>`).join(''):'<span class="server-note">尚未加入競技好友。</span>';arenaLogs.innerHTML=(ARENA_DATA.logs||[]).length?ARENA_DATA.logs.map(x=>`<div class="ranking-row ${x.result==='WIN'?'arena-win':'arena-lose'}"><div class="rank">${x.result==='WIN'?'勝':'敗'}</div><div class="grow"><b>${x.wasDefense?'防守：':'挑戰：'}${escapeHtml(x.opponentName||'未知玩家')}</b><small style="display:block">${formatAnnouncementDate(x.createdAt)}・${x.battleType==='SPAR'?'好友切磋':'積分 '+(x.ratingDelta>=0?'+':'')+x.ratingDelta}</small></div><button class="text-btn" data-arena-replay="${x.id}">回放</button></div>`).join(''):'<div class="info-box">尚無競技場戰鬥紀錄。</div>'}
+async function saveArenaDefenseTeam(){try{const r=await api('/api/arena/defense',{method:'POST',body:JSON.stringify({team:state.team,strategy:arenaDefenseStrategy.value})});ARENA_DATA.profile=r.profile;renderArena();toast('獨立防守隊伍與 AI 策略已儲存')}catch(e){toast('儲存失敗：'+e.message)}}
+async function refreshArenaOpponents(){try{let r;try{r=await api('/api/arena/refresh',{method:'POST',body:'{}'})}catch(e){if(e.message!=='ARENA_REFRESH_COOLDOWN'||!confirm(`免費刷新尚未完成，是否花費 ${ARENA_DATA.refreshGemCost||20} 鑽石刷新？`))throw e;r=await api('/api/arena/refresh',{method:'POST',body:JSON.stringify({useGems:true})})}if(r.state){state=r.state;localStorage.setItem('starRealmRpgSave',JSON.stringify(state));renderAll()}await loadArena();toast(r.paid?'已花費鑽石刷新':'已免費刷新')}catch(e){toast(e.message==='GEMS_NOT_ENOUGH'?'鑽石不足':'刷新失敗：'+e.message)}}
+async function challengeArena(opponentId){try{const r=await api('/api/arena/challenge',{method:'POST',body:JSON.stringify({opponentId})});state=r.state||state;localStorage.setItem('starRealmRpgSave',JSON.stringify(state));showArenaReplay(r.replay,r.result);modal(r.result==='WIN'?'🏆':'⚔️',r.result==='WIN'?'競技勝利':'挑戰失敗',`競技幣 +${r.arenaCoinsEarned}，積分 ${r.ratingDelta>=0?'+':''}${r.ratingDelta}。`);await loadArena();renderAll()}catch(e){toast(e.message==='ARENA_DAILY_LIMIT'?'今日挑戰次數已用完':'挑戰失敗：'+e.message)}}
+function showArenaReplay(turns,result){arenaReplay.classList.remove('hidden');arenaReplay.innerHTML=`<div class="section-title"><h3>戰鬥回放・${result==='WIN'?'勝利':'失敗'}</h3><button class="text-btn" data-close-replay>關閉</button></div>${(turns||[]).map(t=>t.action==='RESULT'?`<div class="replay-turn replay-result">最終結果：${t.result==='WIN'?'勝利':'失敗'}</div>`:`<div class="replay-turn"><b>Round ${t.round}</b> ${t.side==='ATTACKER'?'我方':'防守方'}・${arenaHeroBadge(t.actor)} ${t.action==='HEAL'?'治療':'攻擊'} ${arenaHeroBadge(t.target)} <strong>${t.value}</strong></div>`).join('')}`;arenaReplay.scrollIntoView({behavior:'smooth'})}
+async function loadArenaReplay(id){try{const r=await api(`/api/arena/replay/${encodeURIComponent(id)}`);showArenaReplay(r.replay,r.result)}catch(e){toast('回放讀取失敗：'+e.message)}}
+async function addArenaFriend(){const id=arenaFriendId.value.trim();if(!id)return toast('請輸入好友玩家 ID');try{await api('/api/arena/friends',{method:'POST',body:JSON.stringify({friendPlayerId:id})});toast('已互相加入競技好友');await loadArena()}catch(e){toast('加入失敗：'+e.message)}}
+async function sparArena(target){const id=(target||arenaFriendId.value).trim();if(!id)return toast('請輸入或選擇好友');try{const r=await api('/api/arena/spar',{method:'POST',body:JSON.stringify({targetPlayerId:id})});showArenaReplay(r.replay,r.result);toast(r.result==='WIN'?'切磋勝利（不影響積分）':'切磋失敗（不影響積分）');await loadArena()}catch(e){toast('切磋失敗：'+e.message)}}
+async function loadArenaLeaderboard(scope='global'){ARENA_RANK_SCOPE=scope;try{const r=await api(`/api/arena/leaderboard?scope=${encodeURIComponent(scope)}`);arenaLeaderboard.innerHTML=(r.rows||[]).length?r.rows.map(x=>`<div class="ranking-row ${x.isMe?'me':''}"><div class="rank">${x.rank}</div><div class="grow"><b>${escapeHtml(x.displayName)}</b><small style="display:block">${escapeHtml(x.tier)}・最高 ${escapeHtml(x.highestTier)}・${x.wins} 勝</small></div><strong>${x.rating}</strong></div>`).join(''):`<div class="info-box">${escapeHtml(r.message||'此排行榜目前沒有資料。')}</div>`}catch(e){arenaLeaderboard.innerHTML='<div class="info-box">排行榜讀取失敗。</div>'}}
+async function claimArenaReward(type){try{const r=await api('/api/arena/rewards',{method:'POST',body:JSON.stringify({type})});state=r.state||state;localStorage.setItem('starRealmRpgSave',JSON.stringify(state));toast(`已領取：鑽石 ${r.reward.gems||0}、競技幣 ${r.reward.arenaCoins||0}`);await loadArena();renderAll()}catch(e){toast('目前尚不可領取')}}
+if(window.saveArenaDefense)saveArenaDefense.onclick=saveArenaDefenseTeam;if(window.refreshArena)refreshArena.onclick=refreshArenaOpponents;if(window.addArenaFriend)addArenaFriend.onclick=addArenaFriend;if(window.sparArenaFriend)sparArenaFriend.onclick=()=>sparArena('');
+document.addEventListener('click',e=>{const c=e.target.closest('[data-arena-challenge]');if(c){challengeArena(c.dataset.arenaChallenge);return}const rp=e.target.closest('[data-arena-replay]');if(rp){loadArenaReplay(rp.dataset.arenaReplay);return}const fr=e.target.closest('[data-arena-friend]');if(fr){arenaFriendId.value=fr.dataset.arenaFriend;sparArena(fr.dataset.arenaFriend);return}const rank=e.target.closest('[data-arena-rank]');if(rank){document.querySelectorAll('[data-arena-rank]').forEach(x=>x.classList.toggle('active',x===rank));loadArenaLeaderboard(rank.dataset.arenaRank);return}const reward=e.target.closest('[data-arena-reward]');if(reward){claimArenaReward(reward.dataset.arenaReward);return}if(e.target.closest('[data-close-replay]'))arenaReplay.classList.add('hidden')});

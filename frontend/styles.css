@@ -138,3 +138,16 @@ body{
 .arena-defense,.arena-team{display:flex;gap:8px;flex-wrap:wrap}.arena-defense{padding:14px;background:#0d1022;border:1px solid var(--border);border-radius:16px;margin-bottom:18px}.arena-hero-chip{display:inline-flex;align-items:center;padding:8px 10px;border-radius:999px;background:#252b53;border:1px solid #505b92;font-size:13px}
 .arena-opponents{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}.arena-opponent{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:16px;display:grid;gap:14px}.arena-opponent-head{display:flex;justify-content:space-between;gap:12px}.arena-opponent-head small{display:block;color:var(--muted);margin-top:4px}.arena-win .rank{color:#77e7a1}.arena-lose .rank{color:#ff879d}
 @media(max-width:640px){.arena-hero{align-items:flex-start}.arena-rating b{font-size:32px}.arena-summary{grid-template-columns:1fr}.arena-opponents{grid-template-columns:1fr}}
+
+/* v1.8 Arena */
+.arena-summary-extended{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+.arena-rewards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+.arena-reward-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:14px;display:grid;gap:8px}
+.arena-reward-card p{margin:0;color:var(--muted)}
+.arena-defense-controls,.arena-friend-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.arena-defense-controls select,.arena-friend-tools input{background:#0d1022;border:1px solid var(--border);color:#fff;border-radius:12px;padding:12px;min-width:180px}
+.arena-friends{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 20px}
+.arena-replay{margin-top:18px;background:#0d1022;border:1px solid var(--border);border-radius:18px;padding:16px}
+.replay-turn{padding:10px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.replay-result{font-size:1.1rem;font-weight:800;color:var(--accent)}
+@media(max-width:640px){.arena-friend-tools>*{width:100%}.arena-defense-controls select{width:100%}}
