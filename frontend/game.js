@@ -60,112 +60,32 @@ function applyXp(id,amount){const o=state.owned[id];if(!o)return 0;o.xp+=amount;
 function showPage(id){if(id==="missionPage")loadMissions();if(id==="mailPage")loadMailbox();if(id==="rankingPage")loadRanking();if(id==="guildPage")loadAssists();if(id==="eventPage")loadEventCenter();if(id==="announcementPage")renderAnnouncements();if(id==="arenaPage")loadArena();document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===id));document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.go===id));window.scrollTo({top:0,behavior:"smooth"});renderAll()}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b)showPage(b.dataset.go)});
 function stars(r){return r==="傳說"?"★★★★★":r==="史詩"?"★★★★":"★★★"}
-function heroCard(h,opt={}){const o=state.owned[h.id],st=heroStats(h.id),sel=state.team.includes(h.id),pct=Math.min(100,(o.xp/xpNeed(o.level))*100),rank=o.rank||1,rc=rankCost(rank);return `<article class="hero-card rarity-${h.rarity} ${opt.selectable&&sel?"selected":""}" ${opt.open?`data-open-hero="${h.id}"`:""}><div class="hero-art" style="--c1:${h.c1};--c2:${h.c2}">${h.imageUrl?`<img src="${escapeHtml(h.imageUrl)}" alt="${escapeHtml(h.name)}">`:`<span>${h.emoji}</span>`}</div><h4>${h.name}</h4><div class="stars">${stars(h.rarity)}</div><span class="rank-badge">突破 ${rank} 階</span><div class="hero-meta"><span>Lv.${st.level}</span><span>戰力 ${st.atk*10+st.hp}</span></div><div class="xp-wrap"><div class="xp-bar"><i style="width:${pct}%"></i></div><div class="xp-label"><span>EXP</span><span>${o.xp}/${xpNeed(o.level)}</span></div></div>${opt.actions?`<div class="hero-actions"><button data-upgrade="${h.id}">升級 🪙 ${upgradeCost(st.level)}</button><button data-rankup="${h.id}" ${rank>=5?"disabled":""}>${rank>=5?"已達最高突破":`突破 🪙 ${rc.gold}・🔮 ${rc.core}`}</button><button data-skill-upgrade="${h.id}">技能 Lv.${o.skillLevel||1} 🪙 ${(o.skillLevel||1)*800}</button></div><div class="growth-note">升級提高基礎能力；突破額外提高 8%；技能升級提高技能倍率。</div>`:""}${opt.selectable?`<div class="hero-actions"><button data-toggle-team="${h.id}">${sel?"移出隊伍":"加入隊伍"}</button></div>`:""}</article>`}
-function renderHome(){goldValue.textContent=state.gold;gemValue.textContent=state.gems;energyValue.textContent=`${state.energy}/${state.maxEnergy}`;homeTeam.innerHTML=state.team.map(id=>heroCard(HEROES.find(h=>h.id===id))).join("");soundToggle.textContent=state.sound?"🔊":"🔇"}
-function renderHeroes(){heroList.innerHTML=HEROES.filter(h=>state.owned[h.id]).map(h=>heroCard(h,{actions:true,open:true})).join("")||"<p>尚未擁有英雄</p>"}
-function renderTeam(){teamEditor.innerHTML=HEROES.filter(h=>state.owned[h.id]).map(h=>heroCard(h,{selectable:true})).join("")}
-function renderStages(){stageList.innerHTML=STAGES.map(s=>{const locked=s.id>state.stageUnlocked;return `<article class="stage-card ${locked?"locked":""}"><div class="stage-icon">${s.icon}</div><div class="stage-info"><h3>${s.id}. ${s.name}</h3><p>${s.desc}</p><div class="stage-stars">${s.id<state.stageUnlocked?"★★★":"☆☆☆"}</div></div><button class="${locked?"secondary":"primary"}" ${locked?"disabled":""} data-stage="${s.id}">${locked?"🔒":"挑戰 ⚡"+s.energy}</button></article>`}).join("")}
-function renderInventory(){const rows=[["potion","治療藥水","🧪","戰鬥外恢復用途"],["energyPotion","體力藥水","⚡","使用後恢復 10 點體力"],["wood","古木碎片","🪵","用於裝備強化"],["ore","星鐵礦石","⛏️","用於鍛造武器"],["herb","月光藥草","🌿","用於煉金"],["core","裂縫核心","🔮","英雄突破素材"]];const normal=rows.map(([k,n,e,d])=>{const qty=state.inventory[k]||0;return `<div class="inventory-item"><div class="inventory-icon">${e}</div><div><h4>${n}</h4><p>${d}</p></div><div class="inventory-actions"><strong>× ${qty}</strong>${k==="energyPotion"?`<button class="secondary" data-use-item="${k}" ${qty<=0?"disabled":""}>使用</button>`:""}</div></div>`}).join("");const eq=Object.entries(EQUIPMENT).map(([id,e])=>`<div class="inventory-item"><div class="inventory-icon">${e.emoji}</div><div><h4>${e.name}</h4><p>${e.slot==="weapon"?"武器":e.slot==="armor"?"防具":"飾品"}・攻擊 +${e.atk}・生命 +${e.hp}</p></div><strong>× ${state.inventory.equipment[id]||0}</strong></div>`).join("");inventoryList.innerHTML=normal+eq}
-function renderShop(){shopList.innerHTML=SHOP_ITEMS.map(x=>{const owned=x.kind==="equipment"?(state.inventory.equipment[x.id]||0):(state.inventory[x.id]||0);return `<article class="shop-card">${x.imageUrl?`<div class="shop-icon"><img src="${escapeHtml(x.imageUrl)}" alt="${escapeHtml(x.name)}" style="max-width:100%;max-height:100%;object-fit:contain"></div>`:`<div class="shop-icon">${x.emoji}</div>`}<h3>${x.name}</h3><p>${x.desc}</p><small>目前持有：${owned}</small><div class="shop-price">🪙 ${x.price}</div><small class="daily-limit">每日限購依伺服器紀錄</small><button class="primary" data-buy-item="${x.id}">購買</button></article>`}).join("")}
-function renderHeroDetail(){const h=HEROES.find(x=>x.id===selectedHeroId);if(!h||!state.owned[h.id])return;const st=heroStats(h.id),o=state.owned[h.id],eq=o.equipment||{},slots=[["weapon","武器"],["armor","防具"],["accessory","飾品"]];heroDetail.innerHTML=`<div class="detail-panel"><div class="detail-main"><div class="hero-art" style="--c1:${h.c1};--c2:${h.c2}">${h.imageUrl?`<img src="${escapeHtml(h.imageUrl)}" alt="${escapeHtml(h.name)}">`:`<span>${h.emoji}</span>`}</div><h2>${h.name}</h2><div class="stars">${stars(h.rarity)}　${h.rarity}・${h.element}屬性</div><div class="skill-box"><b>${h.skillEmoji} ${h.skill}</b><p style="margin:8px 0 0;color:var(--muted)">${h.skillDesc}</p></div></div><div><div class="detail-stats"><h3>能力與成長</h3><div class="stat-grid"><div class="stat-box"><small>等級</small><b>Lv.${st.level}</b></div><div class="stat-box"><small>綜合戰力</small><b>${st.atk*10+st.hp}</b></div><div class="stat-box"><small>生命</small><b>${st.hp}</b></div><div class="stat-box"><small>攻擊</small><b>${st.atk}</b></div></div><div class="xp-wrap"><div class="xp-bar"><i style="width:${Math.min(100,o.xp/xpNeed(o.level)*100)}%"></i></div><div class="xp-label"><span>英雄經驗</span><span>${o.xp}/${xpNeed(o.level)}</span></div></div></div><div class="equipment-panel" style="margin-top:14px"><h3>裝備穿戴</h3><div class="equipment-list">${slots.map(([slot,label])=>{const eid=eq[slot],item=eid?EQUIPMENT[eid]:null;return `<div class="equipment-slot"><small>${label}</small><div style="font-size:35px">${item?item.emoji:"＋"}</div><b>${item?item.name:"尚未裝備"}</b><button data-equip-slot="${slot}" data-hero-id="${h.id}">${item?"更換":"選擇裝備"}</button></div>`}).join("")}</div></div></div></div>`}
-function renderAll(){renderHome();renderHeroes();renderTeam();renderStages();renderInventory();renderShop();renderHeroDetail();renderEquipmentLab();renderDungeons();renderEventCenter()}
-renderAll();
-document.addEventListener("click",async e=>{
-  const actionable=e.target.closest("[data-upgrade],[data-rankup],[data-skill-upgrade],[data-buy-item],[data-use-item],[data-toggle-team],[data-equip-slot],[data-forge],[data-refine],[data-dismantle],[data-dungeon],[data-event-stage],[data-assist]");
-  if(actionable){e.preventDefault();e.stopPropagation()}
-  const up=e.target.closest("[data-upgrade]");if(up){await upgradeHero(up.dataset.upgrade);return}
-  const rank=e.target.closest("[data-rankup]");if(rank){await rankUpHero(rank.dataset.rankup);return}
-  const skill=e.target.closest("[data-skill-upgrade]");if(skill){await upgradeSkill(skill.dataset.skillUpgrade);return}
-  const buy=e.target.closest("[data-buy-item]");if(buy){await buyShopItem(buy.dataset.buyItem);return}
-  const use=e.target.closest("[data-use-item]");if(use){await useItem(use.dataset.useItem);return}
-  const forge=e.target.closest("[data-forge]");if(forge){await enhanceEquipment(forge.dataset.forge);return}
-  const refine=e.target.closest("[data-refine]");if(refine){await refineEquipment(refine.dataset.refine);return}
-  const dis=e.target.closest("[data-dismantle]");if(dis){await dismantleEquipment(dis.dataset.dismantle);return}
-  const dungeon=e.target.closest("[data-dungeon]");if(dungeon){await runDungeon(dungeon.dataset.dungeon);return}
-  const ev=e.target.closest("[data-event-stage]");if(ev){await runEventStage(ev.dataset.eventStage);return}
-  const assist=e.target.closest("[data-assist]");if(assist){await claimAssist(assist.dataset.assist);return}
-  const tog=e.target.closest("[data-toggle-team]");if(tog){const id=tog.dataset.toggleTeam;if(state.team.includes(id)){if(state.team.length<=1)return toast("隊伍至少保留 1 名英雄");state.team=state.team.filter(x=>x!==id)}else{if(state.team.length>=3)return toast("隊伍最多 3 名英雄");state.team.push(id)}saveState();return}
-  const eq=e.target.closest("[data-equip-slot]");if(eq){chooseEquipment(eq.dataset.heroId,eq.dataset.equipSlot);return}
-  const st=e.target.closest("[data-stage]");if(st){prepareBattle(Number(st.dataset.stage));return}
-  const open=e.target.closest("[data-open-hero]");if(open){selectedHeroId=open.dataset.openHero;showPage("heroDetailPage");return}
-});
-async function upgradeHero(id){
-  const o=state.owned[id];if(!o)return;
-  if(CloudAccount.user){
-    try{const r=await api(`/api/heroes/${id}/upgrade`,{method:"POST",body:"{}"});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();playTone(520);toast(`升級成功，提升至 Lv.${r.level}`)}
-    catch(e){toast(e.message==="GOLD_NOT_ENOUGH"?"金幣不足":"升級失敗："+e.message)}
-    return;
-  }
-  const c=upgradeCost(o.level);if(state.gold<c)return toast("金幣不足");state.gold-=c;o.level++;saveState();playTone(520);toast("英雄升級成功！");
-}
-async function rankUpHero(id){
-  const o=state.owned[id];if(!o)return;const rank=o.rank||1;
-  if(CloudAccount.user){
-    try{const r=await api(`/api/heroes/${id}/rank-up`,{method:"POST",body:"{}"});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();playTone(760);modal("🌟","英雄突破成功",`突破至 ${r.rank} 階，生命與攻擊獲得額外成長。`)}
-    catch(e){toast(e.message==="MATERIAL_NOT_ENOUGH"?"金幣或裂縫核心不足":e.message==="MAX_RANK"?"已達最高突破階級":"突破失敗："+e.message)}
-    return;
-  }
-  const c=rankCost(rank);if(rank>=5)return toast("已達最高突破");if(state.gold<c.gold||(state.inventory.core||0)<c.core)return toast("金幣或裂縫核心不足");state.gold-=c.gold;state.inventory.core-=c.core;o.rank=rank+1;saveState();
-}
-async function buyShopItem(id){
-  const item=SHOP_ITEMS.find(x=>x.id===id);if(!item)return;
-  if(CloudAccount.user){
-    try{const r=await api("/api/shop/buy",{method:"POST",body:JSON.stringify({itemId:id,quantity:1})});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();playTone(610);toast(`已購買 ${item.name}`)}
-    catch(e){toast(e.message==="GOLD_NOT_ENOUGH"?"金幣不足":"購買失敗："+e.message)}
-    return;
-  }
-  if(state.gold<item.price)return toast("金幣不足");state.gold-=item.price;if(item.kind==="equipment")state.inventory.equipment[id]=(state.inventory.equipment[id]||0)+1;else state.inventory[id]=(state.inventory[id]||0)+1;saveState();toast(`已購買 ${item.name}`);
-}
-async function useItem(id){
-  if(id!=="energyPotion")return;
-  if(CloudAccount.user){
-    try{const r=await api("/api/items/use",{method:"POST",body:JSON.stringify({itemId:id})});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();toast("已恢復 10 點體力")}
-    catch(e){toast(e.message==="ITEM_NOT_ENOUGH"?"沒有足夠道具":e.message==="ENERGY_FULL"?"體力已滿":"使用失敗："+e.message)}
-    return;
-  }
-  if((state.inventory[id]||0)<=0)return toast("沒有足夠道具");if(state.energy>=state.maxEnergy)return toast("體力已滿");state.inventory[id]--;state.energy=Math.min(state.maxEnergy,state.energy+10);saveState();
-}
-function chooseEquipment(heroId,slot){const available=Object.entries(EQUIPMENT).filter(([id,e])=>e.slot===slot&&(state.inventory.equipment[id]||0)>0);if(!available.length)return toast("背包沒有可用的此類裝備");const [newId,item]=available[0],o=state.owned[heroId],old=o.equipment[slot];if(old)state.inventory.equipment[old]=(state.inventory.equipment[old]||0)+1;o.equipment[slot]=newId;state.inventory.equipment[newId]--;saveState();playTone(660);toast(`已裝備 ${item.name}`)}
-function prepareBattle(id){currentStage=STAGES.find(s=>s.id===id);if(state.energy<currentStage.energy)return toast("體力不足");battleOver=false;players=[];enemies=[];battleStageLabel.textContent=`STAGE ${currentStage.id}`;battleTitle.textContent=currentStage.name;battleLog.textContent="隊伍已就位，準備開始戰鬥";startBattleButton.classList.remove("hidden");battleContinueButton.classList.add("hidden");renderBattleRows();showPage("battlePage")}
-function makePlayerUnits(){return state.team.map(id=>{const h=heroStats(id);return {...h,maxHp:h.hp,currentHp:h.hp,type:"player"}})}
-function makeEnemyUnits(){return currentStage.enemies.map((e,i)=>({id:"enemy"+i,name:e[0],emoji:e[1],maxHp:e[2],currentHp:e[2],atk:e[3],c1:"#5e2637",c2:"#a45a45",type:"enemy",skill:"攻擊",skillEmoji:"💢"}))}
-function renderBattleRows(){if(!players.length||battleOver){players=makePlayerUnits();enemies=makeEnemyUnits()}const unit=u=>`<div class="battle-unit ${u.currentHp<=0?"dead":""}" id="unit-${u.id}"><div class="battle-avatar" style="--c1:${u.c1};--c2:${u.c2}">${u.emoji}</div><h4>${u.name}</h4><div class="hp"><i style="width:${Math.max(0,u.currentHp/u.maxHp*100)}%"></i></div><div class="hp-label">${Math.max(0,u.currentHp)} / ${u.maxHp}</div></div>`;playerRow.innerHTML=players.map(unit).join("");enemyRow.innerHTML=enemies.map(unit).join("")}
-let serverBattleTicket="";
-startBattleButton.onclick=async()=>{
-  if(CloudAccount.user){
-    try{
-      const r=await api("/api/battle/start",{method:"POST",body:JSON.stringify({stageId:currentStage.id})});
-      state=r.state;serverBattleTicket=r.ticket;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();
-    }catch(e){return toast(e.message==="ENERGY_NOT_ENOUGH"?"體力不足":"無法開始戰鬥："+e.message)}
-  }else{
-    state.energy-=currentStage.energy;saveState();
-  }
-  startBattleButton.classList.add("hidden");battlePotionButton.classList.remove("hidden");updateBattlePotionButton();runBattle()
-};speedButton.onclick=()=>{speed=speed===1?2:1;speedButton.textContent=speed+"×"};leaveBattle.onclick=()=>{clearTimeout(battleTimer);showPage("stagePage")};battleContinueButton.onclick=()=>showPage("stagePage");
-function runBattle(){players=makePlayerUnits();enemies=makeEnemyUnits();battleOver=false;renderBattleRows();let turn=0;const tick=()=>{const p=players.filter(x=>x.currentHp>0),en=enemies.filter(x=>x.currentHp>0);if(!p.length||!en.length)return finishBattle(p.length>0);const attackers=turn%2===0?p:en,targets=turn%2===0?en:p,a=attackers[turn%attackers.length],t=targets[Math.floor(Math.random()*targets.length)],crit=Math.random()<(a.id==="kael"?.28:.16),mult=a.type==="player"?1.15:1,damage=Math.round(a.atk*mult*(.84+Math.random()*.32)*(crit?1.65:1));battleLog.textContent=`${a.name} 使用 ${a.skill||"攻擊"}，對 ${t.name} 造成 ${damage}${crit?" 暴擊！":""}`;animateUnit(a.id,"attacking");showSkillFx(a.skillEmoji||"💢");playTone(a.type==="player"?480:180);setTimeout(()=>{t.currentHp-=damage;renderBattleRows();animateUnit(t.id,"hit");floatDamage(t.id,damage,crit);if(a.id==="luna"&&Math.random()<.35){const healTarget=p.sort((x,y)=>x.currentHp/x.maxHp-y.currentHp/y.maxHp)[0];if(healTarget){const heal=Math.round(a.atk*.65);healTarget.currentHp=Math.min(healTarget.maxHp,healTarget.currentHp+heal);battleLog.textContent+=`，並治療 ${healTarget.name} ${heal} 點生命`;renderBattleRows()}}},180/speed);turn++;battleTimer=setTimeout(tick,760/speed)};tick()}
-function animateUnit(id,cls){requestAnimationFrame(()=>{const el=document.querySelector("#unit-"+id);if(!el)return;el.classList.add(cls);setTimeout(()=>el.classList.remove(cls),300/speed)})}
-function showSkillFx(icon){skillFx.textContent=icon;skillFx.classList.remove("hidden");skillFx.style.animation="none";void skillFx.offsetWidth;skillFx.style.animation="skillBurst .5s ease-out";setTimeout(()=>skillFx.classList.add("hidden"),520/speed)}
-function floatDamage(id,dmg,crit){const el=document.querySelector("#unit-"+id);if(!el)return;const r=el.getBoundingClientRect(),d=document.createElement("div");d.className="damage-float";d.textContent=`-${dmg}${crit?"!":""}`;d.style.left=`${r.left+r.width/2}px`;d.style.top=`${r.top+25}px`;d.style.color=crit?"#ffcf5c":"#fff";document.body.appendChild(d);setTimeout(()=>d.remove(),750)}
-async function finishBattle(win){
-  battleOver=true;clearTimeout(battleTimer);battlePotionButton.classList.add("hidden");battleContinueButton.classList.remove("hidden");
-  if(CloudAccount.user){
-    try{
-      const r=await api("/api/battle/settle",{method:"POST",body:JSON.stringify({ticket:serverBattleTicket,result:win?"WIN":"LOSE"})});
-      state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();
-      battleLog.textContent=win?`勝利！伺服器已發放 ${r.reward.gold||0} 金幣`:"隊伍戰敗";
-      modal(win?"🏆":"💥",win?"戰鬥勝利":"戰鬥失敗",win?`獎勵已由伺服器計算並寫入資料庫：${formatReward(r.reward)}`:"本次沒有獎勵，戰鬥紀錄已保存。");
-      playTone(win?760:120);
-      return;
-    }catch(e){modal("⚠️","結算失敗","伺服器沒有發放獎勵，請返回後重新挑戰。");return}
-  }
-  if(win){
-    const r=currentStage.reward;state.gold+=r.gold;if(r.gem)state.gems+=r.gem;
-    ["wood","ore","herb","core"].forEach(k=>{if(r[k])state.inventory[k]=(state.inventory[k]||0)+r[k]});
-    state.team.forEach(id=>applyXp(id,r.xp));
-    if(currentStage.id===state.stageUnlocked&&state.stageUnlocked<STAGES.length)state.stageUnlocked++;
-    saveState();modal("🏆","訪客模式勝利",`獲得 ${r.gold} 金幣與 ${r.xp} 經驗。`);
-  }else modal("💥","戰鬥失敗","強化英雄後再次挑戰。");
-}
+function heroCard(h,opt={}){const o=state.owned[h.id],st=heroStats(h.id),sel=state.team.includes(h.id),pct=Math.min(100,(o.xp/xpNeed(o.level))*100),rank=o.rank||1,rc=rankCost(rank);return `<article class="hero-card rarity-${h.rarity} ${opt.selectable&&sel?"selected":""}" ${opt.open?`data-open-hero="${h.id}"`:""}><div class="hero-art" style="--c1:${h.c1};--c2:${h.c2}">${h.imageUrl?`<img src="${escapeHtml(h.imageUrl)}" alt="${escapeHtml(h.name)}">`:`<span>${h.emoji}</span>`}</div><h4>${h.name}</h4><div class="stars">${stars(h.rarity)}</div><span class="rank-badge">突破 ${rank} 階</span><div class="hero-meta"><span>Lv.${st.level}</span><span>ATK ${st.atk}</span></div><div class="xp-wrap"><div class="xp-bar"><i style="width:${pct}%"></i></div><div class="xp-label"><span>EXP</span><span>${o.xp}/${xpNeed(o.level)}</span></div></div>${opt.actions?`<div class="hero-actions"><button data-upgrade="${h.id}">升級 ${upgradeCost(o.level)}🪙</button><button data-toggle="${h.id}">${sel?"移出":"入隊"}</button></div>`:""}</article>`}
+function renderAll(){goldValue.textContent=state.gold;gemValue.textContent=state.gems;energyValue.textContent=`${state.energy}/${state.maxEnergy}`;soundToggle.textContent=state.sound?"🔊":"🔇";homeTeam.innerHTML=state.team.map(id=>heroCard(HEROES.find(h=>h.id===id))).join("");heroList.innerHTML=HEROES.map(h=>state.owned[h.id]?heroCard(h,{actions:true,open:true}):`<article class="hero-card locked"><div class="hero-art" style="--c1:#222;--c2:#333">❔</div><h4>尚未獲得</h4><div class="stars">${stars(h.rarity)}</div></article>`).join("");teamEditor.innerHTML=HEROES.filter(h=>state.owned[h.id]).map(h=>heroCard(h,{selectable:true,actions:true,open:false})).join("");stageList.innerHTML=STAGES.map(s=>`<article class="stage-card ${s.id>state.stageUnlocked?"locked":""}"><div class="stage-icon">${s.icon}</div><div class="stage-info"><h3>${s.id}. ${s.name}</h3><p>${s.desc}</p><small>消耗 ⚡${s.energy}　獎勵 🪙${s.reward.gold}</small></div><button class="${s.id<=state.stageUnlocked?"primary":"secondary"}" data-stage="${s.id}" ${s.id>state.stageUnlocked?"disabled":""}>挑戰</button></article>`).join("");shopList.innerHTML=SHOP_ITEMS.map(i=>`<article class="shop-card"><div class="shop-icon">${i.imageUrl?`<img src="${i.imageUrl}" alt="${i.name}">`:i.emoji}</div><div><h4>${i.name}</h4><p>${i.desc}</p><b>🪙 ${i.price}</b></div><button class="secondary" data-buy="${i.id}">購買</button></article>`).join("");inventoryList.innerHTML=renderInventory();renderDungeonList();renderEventCenter();renderEquipmentLab();renderHeroDetail()}
+function renderInventory(){const rows=[["🪵","古木碎片",state.inventory.wood],["⛏️","星鐵礦石",state.inventory.ore],["🌿","月光藥草",state.inventory.herb],["🔷","裂縫核心",state.inventory.core],["🧪","治療藥水",state.inventory.potion],["⚡","體力藥水",state.inventory.energyPotion||0]];for(const [id,n] of Object.entries(state.inventory.equipment||{})){const e=EQUIPMENT[id];if(e)rows.push([e.emoji,e.name,n,id])}return rows.map(x=>`<div class="inventory-item"><div class="inventory-icon">${x[0]}</div><div><b>${x[1]}</b><small>冒險物資</small></div><span class="qty">× ${x[2]}</span>${x[1]==="體力藥水"&&x[2]>0?'<button class="secondary" data-use="energyPotion">使用</button>':""}</div>`).join("")}
+function renderDungeonList(){if(!window.dungeonList)return;const info=window.currentDungeonInfo||{};dungeonList.innerHTML=DUNGEONS.map(d=>{const left=info[d.id]?.remaining??3;return `<article class="stage-card"><div class="stage-icon">${d.icon}</div><div class="stage-info"><h3>${d.name}</h3><p>${d.desc}</p><small>⚡ ${d.energy}・今日剩餘 ${left}/3</small></div><button class="primary" data-dungeon="${d.id}" ${left<=0?'disabled':''}>挑戰</button></article>`}).join("")}
+function renderEventCenter(){if(!window.checkinCalendar)return;const x=window.currentEventInfo||{claimedDays:[],todayDay:1,claimedToday:false};checkinCalendar.innerHTML=Array.from({length:7},(_,i)=>{const d=i+1,c=x.claimedDays?.includes(d),today=x.todayDay===d;return `<div class="checkin-day ${c?'claimed':''} ${today?'today':''}"><b>Day ${d}</b><span>${c?'✅':d===7?'💎':'🎁'}</span><small>${d===7?'壓軸獎勵':'登入獎勵'}</small></div>`}).join("");eventCheckinButton.disabled=!!x.claimedToday;eventCheckinButton.textContent=x.claimedToday?'今日已簽到':'今日簽到';eventStageList.innerHTML=EVENT_STAGES.map(e=>`<article class="stage-card"><div class="stage-icon">${e.icon}</div><div class="stage-info"><h3>${e.name}</h3><p>${e.desc}</p><small>⚡ ${e.energy}</small></div><button class="primary" data-event-stage="${e.id}">挑戰</button></article>`).join("")}
+function renderEquipmentLab(){if(!window.equipmentLabList)return;const rows=Object.entries(state.inventory.equipment||{}).filter(([,n])=>n>0);equipmentLabList.innerHTML=rows.length?rows.map(([id,n])=>{const e=EQUIPMENT[id],m=state.equipmentMeta?.[id]||{level:0,refine:0};return `<div class="equipment-lab-card"><div class="inventory-icon">${e?.imageUrl?`<img src="${e.imageUrl}" alt="${e.name}">`:e?.emoji||'🛡️'}</div><div class="grow"><b>${e?.name||id}</b><small>持有 ${n}・強化 +${m.level||0}・精煉 ${m.refine||0}</small></div><button class="secondary" data-enhance="${id}">強化</button><button class="secondary" data-refine="${id}">精煉</button><button class="secondary" data-dismantle="${id}">分解</button></div>`).join(''):'<div class="info-box">目前沒有可鍛造的裝備。</div>'}
+function renderHeroDetail(){if(!window.heroDetail||!selectedHeroId)return;const h=HEROES.find(x=>x.id===selectedHeroId),o=state.owned[selectedHeroId];if(!h||!o){heroDetail.innerHTML='<div class="info-box">尚未擁有此英雄。</div>';return}const st=heroStats(h.id),eq=o.equipment||{},rank=o.rank||1;heroDetail.innerHTML=`<div class="detail-panel"><div class="detail-main"><div class="hero-art" style="--c1:${h.c1};--c2:${h.c2}">${h.imageUrl?`<img src="${escapeHtml(h.imageUrl)}" alt="${escapeHtml(h.name)}">`:`<span>${h.emoji}</span>`}</div><h2>${h.name}</h2><div class="stars">${stars(h.rarity)}</div><p>${h.skillDesc}</p><button class="primary wide" data-detail-upgrade="${h.id}">升級英雄（${upgradeCost(o.level)} 金幣）</button><button class="secondary wide" data-rank-up="${h.id}" ${rank>=5?'disabled':''}>${rank>=5?'已達最高突破':`突破至 ${rank+1} 階（${rankCost(rank).gold} 金幣／${rankCost(rank).core} 核心）`}</button></div><div><div class="detail-stats"><h3>能力值</h3><div class="stat-grid"><div class="stat-box"><small>等級</small><b>Lv.${st.level}</b></div><div class="stat-box"><small>突破</small><b>${rank} 階</b></div><div class="stat-box"><small>生命</small><b>${st.hp}</b></div><div class="stat-box"><small>攻擊</small><b>${st.atk}</b></div></div><div class="skill-box"><b>${h.skillEmoji} ${h.skill}</b><p>${h.skillDesc}</p><small>技能等級 ${o.skillLevel||1}</small><button class="secondary" data-skill-upgrade="${h.id}">升級技能</button></div></div><div class="equipment-panel"><h3>裝備欄</h3><div class="equipment-list">${['weapon','armor','accessory'].map(slot=>{const id=eq[slot],e=EQUIPMENT[id];return `<div class="equipment-slot"><small>${slot}</small><div>${e?.emoji||'＋'}</div><b>${e?.name||'未裝備'}</b><button data-equip-slot="${slot}" data-hero="${h.id}">變更</button></div>`}).join('')}</div></div></div></div>`}
+function chooseEquipment(heroId,slot){const available=Object.entries(state.inventory.equipment||{}).filter(([id,n])=>n>0&&EQUIPMENT[id]?.slot===slot);if(!available.length)return toast("沒有適合此欄位的裝備");const current=state.owned[heroId].equipment[slot],idx=Math.max(-1,available.findIndex(([id])=>id===current)),next=available[(idx+1)%available.length][0];state.owned[heroId].equipment[slot]=next;saveState();renderHeroDetail();toast(`已裝備 ${EQUIPMENT[next].name}`)}
+document.addEventListener("click",e=>{const up=e.target.closest("[data-upgrade]");if(up){upgradeHero(up.dataset.upgrade);return}const t=e.target.closest("[data-toggle]");if(t){toggleTeam(t.dataset.toggle);return}const s=e.target.closest("[data-stage]");if(s){openStage(Number(s.dataset.stage));return}const buy=e.target.closest("[data-buy]");if(buy){buyItem(buy.dataset.buy);return}const use=e.target.closest("[data-use]");if(use){useItem(use.dataset.use);return}const open=e.target.closest("[data-open-hero]");if(open){selectedHeroId=open.dataset.openHero;showPage("heroDetailPage");return}const du=e.target.closest("[data-detail-upgrade]");if(du){upgradeHero(du.dataset.detailUpgrade);return}const ru=e.target.closest("[data-rank-up]");if(ru){rankUpHero(ru.dataset.rankUp);return}const eu=e.target.closest("[data-equip-slot]");if(eu){chooseEquipment(eu.dataset.hero,eu.dataset.equipSlot);return}const su=e.target.closest("[data-skill-upgrade]");if(su){upgradeSkill(su.dataset.skillUpgrade);return}const dg=e.target.closest("[data-dungeon]");if(dg){runDungeon(dg.dataset.dungeon);return}const ev=e.target.closest("[data-event-stage]");if(ev){runEventStage(ev.dataset.eventStage);return}const as=e.target.closest("[data-assist]");if(as){claimAssist(as.dataset.assist);return}const en=e.target.closest("[data-enhance]");if(en){enhanceEquipment(en.dataset.enhance);return}const rf=e.target.closest("[data-refine]");if(rf){refineEquipment(rf.dataset.refine);return}const dm=e.target.closest("[data-dismantle]");if(dm){dismantleEquipment(dm.dataset.dismantle)}});
+function upgradeHero(id){const o=state.owned[id],cost=upgradeCost(o.level);if(CloudAccount.user)return serverHeroUpgrade(id);if(state.gold<cost)return toast("金幣不足");state.gold-=cost;o.level++;saveState();toast("英雄升級成功")}
+function toggleTeam(id){const i=state.team.indexOf(id);if(i>=0){if(state.team.length===1)return toast("至少保留一名英雄");state.team.splice(i,1)}else{if(state.team.length>=3)return toast("隊伍最多三人");state.team.push(id)}saveState()}
+async function serverHeroUpgrade(id){try{const r=await api(`/api/heroes/${encodeURIComponent(id)}/upgrade`,{method:"POST",body:"{}"});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();renderHeroDetail();toast(`升級成功 Lv.${r.level}`)}catch(e){toast(e.message==="GOLD_NOT_ENOUGH"?"金幣不足":"升級失敗："+e.message)}}
+async function rankUpHero(id){if(!CloudAccount.user)return toast("突破功能需要 LINE 登入");try{const r=await api(`/api/heroes/${encodeURIComponent(id)}/rank-up`,{method:"POST",body:"{}"});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();renderHeroDetail();toast(`突破成功 ${r.rank} 階`)}catch(e){toast(e.message==="MATERIAL_NOT_ENOUGH"?"金幣或核心不足":e.message==="MAX_RANK"?"已達最高突破":"突破失敗："+e.message)}}
+async function buyItem(id){if(CloudAccount.user){try{const r=await api("/api/shop/buy",{method:"POST",body:JSON.stringify({itemId:id,quantity:1})});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();toast("購買成功")}catch(e){toast(e.message==="GOLD_NOT_ENOUGH"?"金幣不足":e.message==="DAILY_LIMIT"?"今日購買已達上限":"購買失敗："+e.message)}return}const item=SHOP_ITEMS.find(x=>x.id===id);if(state.gold<item.price)return toast("金幣不足");state.gold-=item.price;if(item.kind==="equipment")state.inventory.equipment[id]=(state.inventory.equipment[id]||0)+1;else state.inventory[id]=(state.inventory[id]||0)+1;saveState();toast("購買成功")}
+async function useItem(id){if(CloudAccount.user){try{const r=await api("/api/items/use",{method:"POST",body:JSON.stringify({itemId:id})});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();toast("道具使用成功")}catch(e){toast(e.message==="ENERGY_FULL"?"體力已滿":"使用失敗："+e.message)}return}if(id==="energyPotion"&&(state.inventory.energyPotion||0)>0){state.inventory.energyPotion--;state.energy=Math.min(state.maxEnergy,state.energy+10);saveState();toast("恢復 10 體力")}}
+function openStage(id){currentStage=STAGES.find(s=>s.id===id);battleTitle.textContent=currentStage.name;battleStageLabel.textContent=`STAGE ${id}`;showPage("battlePage");setupBattle()}
+function setupBattle(){battleOver=false;startBattleButton.classList.remove("hidden");battleContinueButton.classList.add("hidden");battlePotionButton.classList.remove("hidden");players=state.team.map(id=>{const h=heroStats(id);return{id:h.id,name:h.name,emoji:h.emoji,hp:h.hp,maxHp:h.hp,atk:h.atk,c1:h.c1,c2:h.c2,skill:h.skill,skillEmoji:h.skillEmoji}});enemies=currentStage.enemies.map((x,i)=>({id:"e"+i,name:x[0],emoji:x[1],hp:x[2],maxHp:x[2],atk:x[3],c1:"#4b2b52",c2:"#a14458"}));battleLog.textContent="準備迎戰";drawBattle();updateBattlePotionButton()}
+function drawBattle(){playerRow.innerHTML=players.map(unitHtml).join("");enemyRow.innerHTML=enemies.map(unitHtml).join("")}
+function unitHtml(u){const p=Math.max(0,u.hp/u.maxHp*100);return `<div class="battle-unit ${u.hp<=0?"dead":""}" id="unit-${u.id}"><div class="battle-avatar" style="--c1:${u.c1};--c2:${u.c2}">${u.emoji}</div><h4>${u.name}</h4><div class="hp"><i style="width:${p}%"></i></div><div class="hp-label">${Math.max(0,u.hp)} / ${u.maxHp}</div></div>`}
+startBattleButton.onclick=()=>{startBattleButton.classList.add("hidden");runBattle()};battleContinueButton.onclick=()=>showPage("stagePage");leaveBattle.onclick=()=>{clearTimeout(battleTimer);showPage("stagePage")};speedButton.onclick=()=>{speed=speed===1?2:1;speedButton.textContent=speed+"×"};
+function alive(arr){return arr.filter(x=>x.hp>0)}
+function runBattle(){const pa=alive(players),ea=alive(enemies);if(!pa.length||!ea.length)return finishBattle(pa.length>0);const p=pa[Math.floor(Math.random()*pa.length)],e=ea[Math.floor(Math.random()*ea.length)];attack(p,e,true,()=>{if(!alive(enemies).length)return finishBattle(true);const e2=alive(enemies)[Math.floor(Math.random()*alive(enemies).length)],p2=alive(players)[Math.floor(Math.random()*alive(players).length)];attack(e2,p2,false,()=>{if(!alive(players).length)return finishBattle(false);battleTimer=setTimeout(runBattle,500/speed)})})}
+function attack(a,t,isHero,next){const skill=isHero&&Math.random()<.28,mult=skill?1.45:1,damage=Math.max(1,Math.round(a.atk*mult*(.8+Math.random()*.4)));battleLog.textContent=skill?`${a.name} 使用 ${a.skill}`:`${a.name} 攻擊 ${t.name}`;const ae=document.querySelector(`#unit-${a.id}`),te=document.querySelector(`#unit-${t.id}`);ae?.classList.add("attacking");if(skill)skillEffect(a);setTimeout(()=>{ae?.classList.remove("attacking");te?.classList.add("hit");t.hp-=damage;floatDamage(te,damage);drawBattle();setTimeout(()=>{document.querySelector(`#unit-${t.id}`)?.classList.remove("hit");next()},260/speed)},240/speed)}
+function skillEffect(a){const fx=document.createElement("div");fx.className="skill-fx";fx.textContent=a.skillEmoji||"✨";fx.style.color=a.c2;document.body.appendChild(fx);setTimeout(()=>fx.remove(),520/speed);playTone(760)}
+function floatDamage(el,damage){if(!el)return;const r=el.getBoundingClientRect(),d=document.createElement("div");d.className="damage-float";d.textContent=`-${damage}`;d.style.left=`${r.left+r.width/2}px`;d.style.top=`${r.top+20}px`;document.body.appendChild(d);setTimeout(()=>d.remove(),700)}
+function finishBattle(win){battleOver=true;battlePotionButton.classList.add("hidden");battleContinueButton.classList.remove("hidden");battleLog.textContent=win?"戰鬥勝利！":"隊伍全滅…";if(CloudAccount.user){settleServerBattle(win);return}if(win){const r=currentStage.reward;state.gold+=r.gold;state.gems+=r.gem||0;state.inventory.wood+=(r.wood||0);state.inventory.ore+=(r.ore||0);state.inventory.herb+=(r.herb||0);state.inventory.core+=(r.core||0);if(r.equipment)state.inventory.equipment[r.equipment]=(state.inventory.equipment[r.equipment]||0)+1;state.team.forEach(id=>applyXp(id,r.xp));if(currentStage.id===state.stageUnlocked&&state.stageUnlocked<STAGES.length)state.stageUnlocked++;saveState();modal("🏆","訪客模式勝利",`獲得 ${r.gold} 金幣與 ${r.xp} 經驗。`);}else modal("💥","戰鬥失敗","強化英雄後再次挑戰。");}
 function formatReward(r){return [`${r.gold||0} 金幣`,r.gems?`${r.gems} 鑽石`:"",r.xp?`${r.xp} 經驗`:"",r.energy?`${r.energy} 體力`:""].filter(Boolean).join("、")}
 async function summon(count){
   if(CloudAccount.user){
@@ -258,173 +178,190 @@ async function initializeAccount() {
   const params = new URLSearchParams(location.search);
   if (params.get("login")==="success") {
     history.replaceState({}, "", location.pathname);
-    toast("LINE 登入成功，正在載入雲端進度");
-  } else if (params.get("login")==="error") {
+    localStorage.setItem("starRealmAccountMode", "cloud");
+    CloudAccount.mode = "cloud";
+  }
+  if (params.get("login")==="error") {
+    const reason = params.get("reason") || "LINE_LOGIN_FAILED";
     history.replaceState({}, "", location.pathname);
-    modal("⚠️","LINE 登入失敗", params.get("message") || "請檢查 LINE Login 設定後重試。");
+    toast("LINE 登入失敗：" + reason);
   }
 
   try {
-    const result = await api("/api/me");
-    CloudAccount.user = result.user;
-    CloudAccount.mode = "line";
-    localStorage.setItem("starRealmAccountMode","line");
+    const data = await api("/api/me");
+    CloudAccount.user = data.user;
+    CloudAccount.mode = "cloud";
+    localStorage.setItem("starRealmAccountMode", "cloud");
     await loadCloudState();
-    loginGate.classList.add("hidden");
+    setSyncIndicator("☁️ 雲端存檔已連線", "ok");
   } catch (error) {
     CloudAccount.user = null;
-    if (CloudAccount.mode !== "guest") loginGate.classList.remove("hidden");
-    else loginGate.classList.add("hidden");
+    if (!CloudAccount.mode) {
+      loginGate.classList.remove("hidden");
+    }
   }
   CloudAccount.loaded = true;
   updateAccountUi();
 }
 
 async function loadCloudState() {
-  setSyncIndicator("☁️ 讀取雲端進度…");
-  try {
-    const result = await api("/api/game-state");
-    if (result.state && typeof result.state === "object") {
-      state = {
-        ...clone(defaultState),
-        ...result.state,
-        owned: normalizeOwned({...clone(defaultState.owned), ...(result.state.owned||{})}),
-        inventory: {
-          ...clone(defaultState.inventory),
-          ...(result.state.inventory||{}),
-          equipment: {
-            ...clone(defaultState.inventory.equipment),
-            ...(result.state.inventory?.equipment||{})
-          }
-        }
-      };
-      localStorage.setItem("starRealmRpgSave", JSON.stringify(state));
-      renderAll();
-    } else {
-      await cloudSaveNow();
-    }
-    setSyncIndicator("☁️ 雲端進度已載入","ok");
-    setTimeout(()=>setSyncIndicator(),1400);
-  } catch (error) {
-    setSyncIndicator("⚠️ 雲端讀取失敗，保留本機進度","error");
-    setTimeout(()=>setSyncIndicator(),2600);
+  const data = await api("/api/game-state");
+  if (data && data.state) {
+    state = {...clone(defaultState), ...data.state};
+    state.owned = normalizeOwned({...clone(defaultState.owned), ...(data.state.owned||{})});
+    state.inventory = {...clone(defaultState.inventory), ...(data.state.inventory||{})};
+    state.inventory.equipment = {...clone(defaultState.inventory.equipment), ...(data.state.inventory?.equipment||{})};
+    localStorage.setItem("starRealmRpgSave", JSON.stringify(state));
+    renderAll();
   }
 }
 
 function scheduleCloudSave() {
-  if (!CloudAccount.loaded || !CloudAccount.user) return;
+  if (!CloudAccount.loaded || !CloudAccount.user || CloudAccount.syncing) return;
   clearTimeout(CloudAccount.saveTimer);
-  CloudAccount.saveTimer = setTimeout(cloudSaveNow, 900);
+  CloudAccount.saveTimer = setTimeout(syncCloudState, 700);
 }
 
-async function cloudSaveNow() {
+async function syncCloudState() {
   if (!CloudAccount.user || CloudAccount.syncing) return;
   CloudAccount.syncing = true;
-  setSyncIndicator("☁️ 正在同步…");
+  setSyncIndicator("☁️ 儲存中…", "");
   try {
-    await api("/api/game-state", {method:"PUT", body:JSON.stringify({state})});
-    setSyncIndicator("☁️ 已同步","ok");
-    setTimeout(()=>setSyncIndicator(),1100);
+    const data = await api("/api/game-state", {
+      method:"PUT",
+      body: JSON.stringify({state})
+    });
+    if (data.state) state = data.state;
+    localStorage.setItem("starRealmRpgSave", JSON.stringify(state));
+    setSyncIndicator("☁️ 已同步", "ok");
   } catch (error) {
-    setSyncIndicator("⚠️ 同步失敗，稍後重試","error");
-    setTimeout(()=>setSyncIndicator(),2600);
+    setSyncIndicator("⚠️ 雲端同步失敗", "error");
   } finally {
     CloudAccount.syncing = false;
   }
 }
 
-lineLoginButton.onclick = accountLoginButton.onclick = () => {
-  location.href = "/auth/line/start";
-};
-guestButton.onclick = () => {
-  CloudAccount.mode = "guest";
-  localStorage.setItem("starRealmAccountMode","guest");
-  loginGate.classList.add("hidden");
-  updateAccountUi();
-};
-accountButton.onclick = () => {
-  updateAccountUi();
-  accountModal.classList.remove("hidden");
-};
-accountCloseButton.onclick = () => accountModal.classList.add("hidden");
-manualSyncButton.onclick = async () => {
-  accountModal.classList.add("hidden");
-  await cloudSaveNow();
-};
-logoutButton.onclick = async () => {
-  try { await api("/api/logout",{method:"POST",body:"{}"}); } catch {}
-  CloudAccount.user = null;
-  CloudAccount.mode = "guest";
-  localStorage.setItem("starRealmAccountMode","guest");
-  accountModal.classList.add("hidden");
-  updateAccountUi();
-  toast("已登出 LINE，現在使用本機存檔");
-};
-window.addEventListener("online", () => {
-  if (CloudAccount.user) cloudSaveNow();
-});
-window.addEventListener("beforeunload", () => {
-  if (CloudAccount.user && navigator.sendBeacon) {
-    navigator.sendBeacon("/api/game-state-beacon", new Blob([JSON.stringify({state})],{type:"application/json"}));
+async function serverDailyClaim() {
+  const data = await api("/api/daily", {method:"POST"});
+  state = data.state;
+  localStorage.setItem("starRealmRpgSave", JSON.stringify(state));
+  renderAll();
+  modal("🎁", "每日補給", `獲得 ${formatReward(data.reward)}`);
+}
+
+async function serverSummon(count) {
+  const data = await api("/api/summon", {method:"POST", body:JSON.stringify({count})});
+  state = data.state;
+  localStorage.setItem("starRealmRpgSave", JSON.stringify(state));
+  renderAll();
+  summonResult.innerHTML = data.heroes.map(h=>{
+    const x=HEROES.find(v=>v.id===h.id);
+    return `<div class="mini-result"><div>${x?.emoji||"✨"}</div><small>${x?.name||h.id}</small><small style="color:var(--gold)">${h.rarity}</small></div>`;
+  }).join("");
+  modal("✨", "伺服器召喚完成", `鑽石已由伺服器扣除，獲得 ${count} 名英雄。`);
+}
+
+async function requestServerBattle(stageId) {
+  const data = await api("/api/battle/start", {method:"POST", body:JSON.stringify({stageId, team:state.team})});
+  return data.battleId;
+}
+
+async function settleServerBattle(win) {
+  if (!window.currentServerBattleId) return;
+  try {
+    const data = await api("/api/battle/settle", {
+      method:"POST",
+      body:JSON.stringify({battleId:window.currentServerBattleId, result:win?"WIN":"LOSE"})
+    });
+    state = data.state;
+    localStorage.setItem("starRealmRpgSave", JSON.stringify(state));
+    renderAll();
+    if (win) modal("🏆", "伺服器結算完成", `獲得 ${formatReward(data.reward)}`);
+    else modal("💥", "戰鬥失敗", "本次沒有發放獎勵。");
+  } catch (error) {
+    modal("⚠️", "結算失敗", error.message);
+  } finally {
+    window.currentServerBattleId = null;
   }
+}
+
+const originalOpenStage = openStage;
+openStage = async function(id) {
+  if (CloudAccount.user) {
+    try {
+      window.currentServerBattleId = await requestServerBattle(id);
+    } catch (error) {
+      if (error.message === "ENERGY_NOT_ENOUGH") return toast("體力不足");
+      if (error.message === "BATTLE_PENDING") return toast("上一場戰鬥尚未結算，請稍後再試");
+      return toast("無法開始戰鬥：" + error.message);
+    }
+  }
+  originalOpenStage(id);
+};
+
+accountButton.onclick = ()=>accountModal.classList.remove("hidden");
+accountModalClose.onclick = ()=>accountModal.classList.add("hidden");
+lineLoginButton.onclick = ()=>location.href="/auth/line/start";
+accountLoginButton.onclick = ()=>location.href="/auth/line/start";
+guestButton.onclick = ()=>{
+  localStorage.setItem("starRealmAccountMode", "guest");
+  CloudAccount.mode = "guest";
+  loginGate.classList.add("hidden");
+  toast("已進入訪客模式");
+};
+manualSyncButton.onclick = async ()=>{
+  accountModal.classList.add("hidden");
+  await syncCloudState();
+  toast("同步完成");
+};
+logoutButton.onclick = async ()=>{
+  try { await api("/api/logout", {method:"POST"}); } catch {}
+  CloudAccount.user = null;
+  CloudAccount.mode = "";
+  localStorage.removeItem("starRealmAccountMode");
+  accountModal.classList.add("hidden");
+  updateAccountUi();
+  loginGate.classList.remove("hidden");
+  toast("已登出雲端帳號");
+};
+
+window.addEventListener("beforeunload", ()=>{
+  if (!CloudAccount.user) return;
+  try {
+    navigator.sendBeacon("/api/game-state-beacon", new Blob([JSON.stringify({state})], {type:"application/json"}));
+  } catch {}
 });
+
+renderAll();
 initializeAccount();
 
+
+// ===== v1.3.1 mission + mail =====
 async function loadMissions(){
-  if(!CloudAccount.user){missionList.innerHTML='<div class="info-box">每日任務需要使用 LINE 登入。</div>';return}
+  if(!CloudAccount.user){missionList.innerHTML='<div class="info-box">使用 LINE 登入後才會啟用伺服器每日任務。</div>';return}
   try{
-    const r=await api("/api/missions");
-    missionList.innerHTML=r.missions.map(m=>`<div class="mission-card"><div class="inventory-icon">${m.icon}</div><div class="grow"><b>${m.title}</b><small style="display:block">${m.progress}/${m.target}　獎勵：${formatReward(m.reward)}</small><div class="progress-mini"><i style="width:${Math.min(100,m.progress/m.target*100)}%"></i></div></div><button class="primary" data-claim-mission="${m.id}" ${m.progress<m.target||m.claimed?"disabled":""}>${m.claimed?"已領取":"領取"}</button></div>`).join("");
-  }catch(e){missionList.innerHTML='<div class="info-box">任務讀取失敗</div>'}
+    const data=await api("/api/missions");
+    missionList.innerHTML=data.missions.map(m=>`<div class="mission-card ${m.claimed?"claimed":""}"><div class="mission-icon">${m.icon}</div><div class="mission-content"><b>${m.title}</b><small>${m.description}</small><div class="mission-progress"><i style="width:${Math.min(100,m.progress/m.target*100)}%"></i></div><small>${m.progress} / ${m.target}・${m.rewardLabel}</small></div><button class="${m.complete&&!m.claimed?"primary":"secondary"}" data-claim-mission="${m.id}" ${!m.complete||m.claimed?"disabled":""}>${m.claimed?"已領取":m.complete?"領取":"進行中"}</button></div>`).join("");
+  }catch(e){missionList.innerHTML='<div class="info-box">每日任務讀取失敗。</div>'}
 }
+async function claimMission(id){try{const r=await api(`/api/missions/${id}/claim`,{method:"POST"});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();loadMissions();modal("🎯","任務獎勵",formatReward(r.reward))}catch(e){toast(e.message==="ALREADY_CLAIMED"?"已領取":"尚未完成")}}
 async function loadMailbox(){
-  if(!CloudAccount.user){mailList.innerHTML='<div class="info-box">冒險信箱需要使用 LINE 登入。</div>';return}
-  try{
-    const r=await api("/api/mail");
-    mailList.innerHTML=r.mails.length?r.mails.map(m=>`<div class="mail-card ${m.claimed_at?"read":""}"><div class="inventory-icon">📨</div><div class="grow"><b>${m.title}</b> ${!m.claimed_at?'<span class="badge-new">NEW</span>':""}<small style="display:block">${m.body}</small><small class="server-note">${formatReward(m.reward)}</small></div><button class="primary" data-claim-mail="${m.id}" ${m.claimed_at?"disabled":""}>${m.claimed_at?"已領取":"領取"}</button></div>`).join(""):'<div class="info-box">目前沒有信件。</div>';
-  }catch(e){mailList.innerHTML='<div class="info-box">信箱讀取失敗</div>'}
+  if(!CloudAccount.user){mailList.innerHTML='<div class="info-box">使用 LINE 登入後才會啟用冒險信箱。</div>';return}
+  try{const data=await api("/api/mail");mailList.innerHTML=data.mail.length?data.mail.map(m=>`<div class="mail-card ${m.claimed_at?"claimed":""}"><div class="mail-icon">${m.claimed_at?"✅":"📨"}</div><div class="mail-content"><b>${escapeHtml(m.title)}</b><small>${escapeHtml(m.body)}</small><small>${m.rewardLabel}</small></div><button class="${m.claimed_at?"secondary":"primary"}" data-claim-mail="${m.id}" ${m.claimed_at?"disabled":""}>${m.claimed_at?"已領取":"領取"}</button></div>`).join(""):'<div class="info-box">目前沒有信件。</div>'}catch(e){mailList.innerHTML='<div class="info-box">信箱讀取失敗。</div>'}
 }
-async function loadRanking(){
-  try{
-    const r=await api("/api/leaderboard");
-    rankingList.innerHTML=r.rows.map((x,i)=>`<div class="ranking-row ${x.isMe?"me":""}"><div class="rank">${i<3?["🥇","🥈","🥉"][i]:i+1}</div><div class="grow"><b>${escapeHtml(x.displayName)}</b><small style="display:block">通關 ${x.stageUnlocked}　勝利 ${x.wins}</small></div><strong>${x.power}</strong></div>`).join("");
-  }catch(e){rankingList.innerHTML='<div class="info-box">排行榜讀取失敗</div>'}
-}
-document.addEventListener("click",async e=>{
-  const mb=e.target.closest("[data-claim-mission]");
-  if(mb){try{const r=await api(`/api/missions/${mb.dataset.claimMission}/claim`,{method:"POST",body:"{}"});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();loadMissions();toast("任務獎勵已領取")}catch(err){toast(err.message)}}
-  const mail=e.target.closest("[data-claim-mail]");
-  if(mail){try{const r=await api(`/api/mail/${mail.dataset.claimMail}/claim`,{method:"POST",body:"{}"});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();loadMailbox();toast("信件獎勵已領取")}catch(err){toast(err.message)}}
-});
+async function claimMail(id){try{const r=await api(`/api/mail/${id}/claim`,{method:"POST"});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();loadMailbox();modal("📬","已領取信件附件",formatReward(r.reward))}catch(e){toast(e.message==="ALREADY_CLAIMED"?"信件已領取":"領取失敗")}}
+document.addEventListener("click",e=>{const m=e.target.closest("[data-claim-mission]");if(m)claimMission(m.dataset.claimMission);const x=e.target.closest("[data-claim-mail]");if(x)claimMail(x.dataset.claimMail)});
+async function loadRanking(){try{const r=await api("/api/leaderboard");rankingList.innerHTML=r.rows.map((x,i)=>`<div class="ranking-row ${x.isMe?"me":""}"><div class="rank">${i+1}</div><div class="grow"><b>${escapeHtml(x.displayName)}</b><small style="display:block">關卡 ${x.stageUnlocked}・勝場 ${x.wins}</small></div><strong>${x.power}</strong></div>`).join("")}catch{rankingList.innerHTML='<div class="info-box">排行榜讀取失敗。</div>'}}
 
-if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
-}
 
-function renderEquipmentLab(){
-  if(!window.equipmentLabList)return;
-  equipmentLabList.innerHTML=Object.entries(EQUIPMENT).map(([id,e])=>{
-    const qty=state.inventory.equipment[id]||0,meta=state.equipmentMeta?.[id]||{level:0,refine:0};
-    return `<div class="inventory-item"><div class="inventory-icon">${e.emoji}</div><div style="flex:1"><h4>${e.name} +${meta.level}</h4><p>精煉 ${meta.refine} 階・持有 ${qty} 件</p><div class="forge-actions"><button class="secondary" data-forge="${id}" ${qty<1?"disabled":""}>強化</button><button class="secondary" data-refine="${id}" ${qty<1?"disabled":""}>精煉</button><button class="danger-button" data-dismantle="${id}" ${qty<1?"disabled":""}>分解 1 件</button></div></div></div>`
-  }).join("");
-}
-function renderDungeons(){
-  if(!window.dungeonList)return;
-  dungeonList.innerHTML=DUNGEONS.map(d=>`<button class="stage-card" data-dungeon="${d.id}"><span class="stage-icon">${d.icon}</span><div><b>${d.name}</b><small>${d.desc}</small></div><span>⚡ ${d.energy}</span></button>`).join("");
-}
-function renderEventCenter(){
-  if(!window.checkinCalendar)return;
-  const info=window.currentEventInfo||{claimedDays:[],todayIndex:0};
-  checkinCalendar.innerHTML=Array.from({length:7},(_,i)=>`<div class="checkin-day ${info.claimedDays.includes(i+1)?"claimed":""} ${info.todayIndex===i+1?"today":""}"><b>第 ${i+1} 天</b><div>${["🪙500","💎50","⚡10","🔮1","🪙1000","💎100","🎁大禮"][i]}</div></div>`).join("");
-  eventStageList.innerHTML=EVENT_STAGES.map(x=>`<button class="stage-card" data-event-stage="${x.id}"><span class="stage-icon">${x.icon}</span><div><b>${x.name}</b><small>${x.desc}</small></div><span>⚡ ${x.energy}</span></button>`).join("");
-}
+// ===== v1.4 skills/equipment/dungeon/event/guild =====
 async function upgradeSkill(id){
-  if(!CloudAccount.user)return toast("請先使用 LINE 登入");
-  try{const r=await api(`/api/heroes/${id}/skill-upgrade`,{method:"POST",body:"{}"});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();toast(`技能提升至 Lv.${r.skillLevel}`)}
+  if(!CloudAccount.user)return toast("技能升級需要 LINE 登入");
+  try{const r=await api(`/api/heroes/${encodeURIComponent(id)}/skill-upgrade`,{method:"POST",body:"{}"});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();renderHeroDetail();toast(`技能升級至 ${r.skillLevel}`)}
   catch(e){toast(e.message==="GOLD_NOT_ENOUGH"?"金幣不足":"技能升級失敗："+e.message)}
 }
 async function enhanceEquipment(id){
-  if(!CloudAccount.user)return toast("請先使用 LINE 登入");
+  if(!CloudAccount.user)return toast("裝備強化需要 LINE 登入");
   try{const r=await api("/api/equipment/enhance",{method:"POST",body:JSON.stringify({equipmentId:id})});state=r.state;localStorage.setItem("starRealmRpgSave",JSON.stringify(state));renderAll();toast(`強化成功 +${r.level}`)}
   catch(e){toast(e.message==="MATERIAL_NOT_ENOUGH"?"金幣或礦石不足":"強化失敗："+e.message)}
 }
@@ -588,21 +525,26 @@ document.addEventListener("click",e=>{
 loadPublicCatalog();
 
 
-// v1.8 完整非同步競技場
-let ARENA_DATA=null,ARENA_RANK_SCOPE='global';
+// v1.8.4 完整非同步競技場
+let ARENA_DATA=null,ARENA_RANK_SCOPE='global',ARENA_LOG_PAGE=1,ARENA_LOG_QUERY='',ARENA_LOG_RANGE='all',ARENA_REPLAY_STATE={turns:[],result:'',page:1,pageSize:15,speed:1};
 function arenaHeroBadge(id){const h=HEROES.find(x=>x.id===id);return h?`<span class="arena-hero-chip">${h.emoji||"✨"} ${escapeHtml(h.name)}</span>`:`<span class="arena-hero-chip">✨ 未知英雄</span>`}
 function arenaRewardCard(type,label,data){const ready=data&&!data.claimed&&data.progress>=data.target;return `<article class="arena-reward-card"><b>${label}</b><small>${data?.progress||0} / ${data?.target||0}</small><p>💎 ${data?.reward?.gems||0}　🪙 ${data?.reward?.arenaCoins||0}</p><button class="secondary" data-arena-reward="${type}" ${ready?'':'disabled'}>${data?.claimed?'已領取':ready?'領取':'尚未達成'}</button></article>`}
-async function loadArena(){if(!window.arenaOpponents)return;if(!CloudAccount.user){arenaOpponents.innerHTML='<div class="info-box">星界競技場需要使用 LINE 登入。</div>';return}arenaOpponents.innerHTML='<div class="info-box">正在搜尋對手…</div>';try{ARENA_DATA=await api('/api/arena/status');renderArena();loadArenaLeaderboard(ARENA_RANK_SCOPE)}catch(e){arenaOpponents.innerHTML=`<div class="info-box">競技場讀取失敗：${escapeHtml(e.message)}</div>`}}
-function renderArena(){if(!ARENA_DATA)return;const p=ARENA_DATA.profile||{};arenaTier.textContent=p.tier||'青銅 III';arenaRating.textContent=p.rating||1000;arenaCoins.textContent=p.arenaCoins||0;arenaRemaining.textContent=`${ARENA_DATA.remaining??0} / 5`;arenaWins.textContent=p.wins||0;arenaLosses.textContent=p.losses||0;arenaWinRate.textContent=`${p.winRate||0}%`;arenaHighestTier.textContent=p.highestTier||p.tier||'青銅 III';arenaStreak.textContent=p.currentStreak||0;arenaBestStreak.textContent=p.bestStreak||0;arenaSeason.textContent=p.seasonKey||'SEASON';if(window.arenaFriendCode)arenaFriendCode.textContent=p.friendCode||'尚未建立';arenaDefenseStrategy.value=p.defenseStrategy||'BALANCED';const defense=Array.isArray(p.defenseTeam)&&p.defenseTeam.length?p.defenseTeam:state.team;arenaDefense.innerHTML=defense.map(arenaHeroBadge).join('');const rewards=ARENA_DATA.rewards||{};arenaRewards.innerHTML=arenaRewardCard('daily','每日獎勵',rewards.daily)+arenaRewardCard('weekly','每週獎勵',rewards.weekly)+arenaRewardCard('season','賽季獎勵',rewards.season);const when=ARENA_DATA.nextFreeRefreshAt?formatAnnouncementDate(ARENA_DATA.nextFreeRefreshAt):'現在';arenaRefreshNote.textContent=`免費刷新時間：${when}；冷卻中可花費 ${ARENA_DATA.refreshGemCost||20} 鑽石刷新。`;const opponents=ARENA_DATA.opponents||[];arenaOpponents.innerHTML=opponents.length?opponents.map(o=>`<article class="arena-opponent"><div class="arena-opponent-head"><div><b>${escapeHtml(o.displayName)}</b><small>${escapeHtml(o.tier)}・積分 ${o.rating}・AI ${escapeHtml(o.strategyLabel||'均衡')}</small></div><strong>戰力 ${o.power}</strong></div><div class="arena-team">${(o.team||[]).map(arenaHeroBadge).join('')}</div><button class="primary" data-arena-challenge="${o.id}" ${(ARENA_DATA.remaining||0)<=0?'disabled':''}>挑戰</button></article>`).join(''):'<div class="info-box">目前沒有可挑戰的其他玩家。</div>';const friends=ARENA_DATA.friends||[];arenaFriends.innerHTML=friends.length?friends.map(f=>`<div class="arena-friend-card"><div><b>${escapeHtml(f.display_name||f.displayName||f.id)}</b><small>${escapeHtml(f.friend_code||f.friendCode||'')}</small></div><button class="primary" data-arena-friend="${f.id}">立即切磋</button></div>`).join(''):'<span class="server-note">尚未加入競技好友。</span>';arenaLogs.innerHTML=(ARENA_DATA.logs||[]).length?ARENA_DATA.logs.map(x=>`<div class="ranking-row ${x.result==='WIN'?'arena-win':'arena-lose'}"><div class="rank">${x.result==='WIN'?'勝':'敗'}</div><div class="grow"><b>${x.wasDefense?'防守：':'挑戰：'}${escapeHtml(x.opponentName||'未知玩家')}</b><small style="display:block">${formatAnnouncementDate(x.createdAt)}・${x.battleType==='SPAR'?'好友切磋':'積分 '+(x.ratingDelta>=0?'+':'')+x.ratingDelta}</small></div><button class="text-btn" data-arena-replay="${x.id}">回放</button></div>`).join(''):'<div class="info-box">尚無競技場戰鬥紀錄。</div>'}
+async function loadArena(){if(!window.arenaOpponents)return;if(!CloudAccount.user){arenaOpponents.innerHTML='<div class="info-box">星界競技場需要使用 LINE 登入。</div>';return}arenaOpponents.innerHTML='<div class="info-box">正在搜尋對手…</div>';try{ARENA_DATA=await api('/api/arena/status');renderArena();await Promise.all([loadArenaLeaderboard(ARENA_RANK_SCOPE),loadArenaLogs(1)])}catch(e){arenaOpponents.innerHTML=`<div class="info-box">競技場讀取失敗：${escapeHtml(e.message)}</div>`}}
+function renderArena(){if(!ARENA_DATA)return;const p=ARENA_DATA.profile||{};arenaTier.textContent=p.tier||'青銅 III';arenaRating.textContent=p.rating||1000;arenaCoins.textContent=p.arenaCoins||0;arenaRemaining.textContent=`${ARENA_DATA.remaining??0} / 5`;arenaWins.textContent=p.wins||0;arenaLosses.textContent=p.losses||0;arenaWinRate.textContent=`${p.winRate||0}%`;arenaHighestTier.textContent=p.highestTier||p.tier||'青銅 III';arenaStreak.textContent=p.currentStreak||0;arenaBestStreak.textContent=p.bestStreak||0;arenaSeason.textContent=p.seasonKey||'SEASON';if(window.arenaFriendCode)arenaFriendCode.textContent=p.friendCode||'尚未建立';arenaDefenseStrategy.value=p.defenseStrategy||'BALANCED';const defense=Array.isArray(p.defenseTeam)&&p.defenseTeam.length?p.defenseTeam:state.team;arenaDefense.innerHTML=defense.map(arenaHeroBadge).join('');const rewards=ARENA_DATA.rewards||{};arenaRewards.innerHTML=arenaRewardCard('daily','每日獎勵',rewards.daily)+arenaRewardCard('weekly','每週獎勵',rewards.weekly)+arenaRewardCard('season','賽季獎勵',rewards.season);const when=ARENA_DATA.nextFreeRefreshAt?formatAnnouncementDate(ARENA_DATA.nextFreeRefreshAt):'現在';arenaRefreshNote.textContent=`免費刷新時間：${when}；冷卻中可花費 ${ARENA_DATA.refreshGemCost||20} 鑽石刷新。`;const opponents=ARENA_DATA.opponents||[];arenaOpponents.innerHTML=opponents.length?opponents.map(o=>`<article class="arena-opponent"><div class="arena-opponent-head"><div><b>${escapeHtml(o.displayName)}</b><small>${escapeHtml(o.tier)}・積分 ${o.rating}・AI ${escapeHtml(o.strategyLabel||'均衡')}</small></div><strong>戰力 ${o.power}</strong></div><div class="arena-team">${(o.team||[]).map(arenaHeroBadge).join('')}</div><button class="primary" data-arena-challenge="${o.id}" ${(ARENA_DATA.remaining||0)<=0?'disabled':''}>挑戰</button></article>`).join(''):'<div class="info-box">目前沒有可挑戰的其他玩家。</div>';const friends=ARENA_DATA.friends||[];arenaFriends.innerHTML=friends.length?friends.map(f=>`<div class="arena-friend-card"><div><b>${escapeHtml(f.display_name||f.displayName||f.id)}</b><small>${escapeHtml(f.friend_code||f.friendCode||'')}</small></div><button class="primary" data-arena-friend="${f.id}">立即切磋</button></div>`).join(''):'<span class="server-note">尚未加入競技好友。</span>'}
 async function saveArenaDefenseTeam(){try{const r=await api('/api/arena/defense',{method:'POST',body:JSON.stringify({team:state.team,strategy:arenaDefenseStrategy.value})});ARENA_DATA.profile=r.profile;renderArena();toast('獨立防守隊伍與 AI 策略已儲存')}catch(e){toast('儲存失敗：'+e.message)}}
 async function refreshArenaOpponents(){try{let r;try{r=await api('/api/arena/refresh',{method:'POST',body:'{}'})}catch(e){if(e.message!=='ARENA_REFRESH_COOLDOWN'||!confirm(`免費刷新尚未完成，是否花費 ${ARENA_DATA.refreshGemCost||20} 鑽石刷新？`))throw e;r=await api('/api/arena/refresh',{method:'POST',body:JSON.stringify({useGems:true})})}if(r.state){state=r.state;localStorage.setItem('starRealmRpgSave',JSON.stringify(state));renderAll()}await loadArena();toast(r.paid?'已花費鑽石刷新':'已免費刷新')}catch(e){toast(e.message==='GEMS_NOT_ENOUGH'?'鑽石不足':'刷新失敗：'+e.message)}}
 async function challengeArena(opponentId){try{const r=await api('/api/arena/challenge',{method:'POST',body:JSON.stringify({opponentId})});state=r.state||state;localStorage.setItem('starRealmRpgSave',JSON.stringify(state));showArenaReplay(r.replay,r.result);modal(r.result==='WIN'?'🏆':'⚔️',r.result==='WIN'?'競技勝利':'挑戰失敗',`競技幣 +${r.arenaCoinsEarned}，積分 ${r.ratingDelta>=0?'+':''}${r.ratingDelta}。`);await loadArena();renderAll()}catch(e){toast(e.message==='ARENA_DAILY_LIMIT'?'今日挑戰次數已用完':'挑戰失敗：'+e.message)}}
-function showArenaReplay(turns,result){arenaReplay.classList.remove('hidden');const rows=(turns||[]).map(t=>{if(t.action==='RESULT')return `<div class="replay-turn replay-result">最終結果：${t.result==='WIN'?'勝利':'失敗'}・我方存活 ${t.attackerRemaining||0}／防守方存活 ${t.defenderRemaining||0}</div>`;const pct=Math.max(0,Math.round((t.targetHp||0)*100/Math.max(1,t.targetMaxHp||1)));return `<div class="replay-turn ${t.defeated?'replay-defeated':''}"><div class="replay-line"><b>Round ${t.round}</b><span>${t.side==='ATTACKER'?'我方':'防守方'}</span>${arenaHeroBadge(t.actor)}<strong>${t.action==='HEAL'?'治療':t.critical?'暴擊':'攻擊'} ${t.value}</strong>${arenaHeroBadge(t.target)}</div><div class="replay-hp"><i style="width:${pct}%"></i><span>${t.targetHp||0} / ${t.targetMaxHp||0}${t.defeated?'・倒下':''}</span></div></div>`}).join('');arenaReplay.innerHTML=`<div class="section-title"><h3>戰鬥回放・${result==='WIN'?'勝利':'失敗'}</h3><button class="text-btn" data-close-replay>關閉</button></div><div class="replay-toolbar"><button class="secondary" data-replay-speed="1">1×</button><button class="secondary" data-replay-speed="2">2×</button><small>此回放與伺服器勝負使用同一份 HP、傷害、治療與暴擊紀錄。</small></div>${rows}`;arenaReplay.scrollIntoView({behavior:'smooth'})}
+function renderArenaReplayPage(){const st=ARENA_REPLAY_STATE,totalPages=Math.max(1,Math.ceil(st.turns.length/st.pageSize));st.page=Math.min(Math.max(1,st.page),totalPages);const start=(st.page-1)*st.pageSize,pageRows=st.turns.slice(start,start+st.pageSize);const rows=pageRows.map(t=>{if(t.action==='RESULT')return `<div class="replay-turn replay-result">最終結果：${t.result==='WIN'?'勝利':'失敗'}・我方存活 ${t.attackerRemaining||0}／防守方存活 ${t.defenderRemaining||0}</div>`;const pct=Math.max(0,Math.round((t.targetHp||0)*100/Math.max(1,t.targetMaxHp||1)));return `<div class="replay-turn ${t.defeated?'replay-defeated':''}"><div class="replay-line"><b>Round ${t.round}</b><span>${t.side==='ATTACKER'?'我方':'防守方'}</span>${arenaHeroBadge(t.actor)}<strong>${t.action==='HEAL'?'治療':t.critical?'暴擊':'攻擊'} ${t.value}</strong>${arenaHeroBadge(t.target)}</div><div class="replay-hp"><i style="width:${pct}%"></i><span>${t.targetHp||0} / ${t.targetMaxHp||0}${t.defeated?'・倒下':''}</span></div></div>`}).join('');arenaReplay.innerHTML=`<div class="section-title"><h3>戰鬥回放・${st.result==='WIN'?'勝利':'失敗'}</h3><button class="text-btn" data-close-replay>關閉</button></div><div class="replay-toolbar"><button class="secondary ${st.speed===1?'active':''}" data-replay-speed="1">1×</button><button class="secondary ${st.speed===2?'active':''}" data-replay-speed="2">2×</button><small>每頁 15 回合；切頁不會重新載入競技場。</small></div>${rows}<div class="arena-pagination"><button class="secondary" data-replay-page="${st.page-1}" ${st.page<=1?'disabled':''}>上一頁</button><span>第 ${st.page} / ${totalPages} 頁</span><button class="secondary" data-replay-page="${st.page+1}" ${st.page>=totalPages?'disabled':''}>下一頁</button></div>`}
+function showArenaReplay(turns,result){ARENA_REPLAY_STATE={turns:Array.isArray(turns)?turns:[],result:result||'',page:1,pageSize:15,speed:ARENA_REPLAY_STATE.speed||1};arenaReplay.classList.remove('hidden');renderArenaReplayPage();arenaReplay.scrollIntoView({behavior:'smooth'})}
 async function loadArenaReplay(id){try{const r=await api(`/api/arena/replay/${encodeURIComponent(id)}`);showArenaReplay(r.replay,r.result)}catch(e){toast('回放讀取失敗：'+e.message)}}
-async function searchArenaFriend(){const q=arenaFriendId.value.trim();if(!q)return toast('請輸入好友代碼或玩家名稱');arenaFriendSearchResults.innerHTML='<div class="info-box">搜尋中…</div>';try{const r=await api(`/api/arena/friend-search?q=${encodeURIComponent(q)}`);arenaFriendSearchResults.innerHTML=(r.rows||[]).length?r.rows.map(x=>`<div class="arena-search-card"><div><b>${escapeHtml(x.displayName)}</b><small>${escapeHtml(x.friendCode)}・${escapeHtml(x.tier)}・積分 ${x.rating}</small></div><button class="secondary" data-add-arena-friend="${x.friendCode}">加入好友</button><button class="primary" data-spar-search="${x.id}">切磋</button></div>`).join(''):'<div class="info-box">找不到玩家，請確認好友代碼或名稱。</div>'}catch(e){arenaFriendSearchResults.innerHTML=`<div class="info-box">搜尋失敗：${escapeHtml(e.message)}</div>`}}
+async function searchArenaFriend(){const q=arenaFriendId.value.trim();if(!q)return toast('請輸入好友代碼或玩家名稱');const btn=window.searchArenaFriend;btn.disabled=true;const old=btn.textContent;btn.textContent='搜尋中…';arenaFriendSearchResults.innerHTML='<div class="info-box">搜尋中…</div>';try{const r=await api(`/api/arena/friend-search?q=${encodeURIComponent(q)}`);arenaFriendSearchResults.innerHTML=(r.rows||[]).length?r.rows.map(x=>`<div class="arena-search-card"><div><b>${escapeHtml(x.displayName)}</b><small>${escapeHtml(x.friendCode)}・${escapeHtml(x.tier)}・積分 ${x.rating}</small></div><button class="secondary" data-add-arena-friend="${x.friendCode}">加入好友</button><button class="primary" data-spar-search="${x.id}">切磋</button></div>`).join(''):'<div class="info-box">找不到玩家，請確認好友代碼或名稱。</div>'}catch(e){arenaFriendSearchResults.innerHTML=`<div class="info-box">搜尋失敗：${escapeHtml(e.message)}</div>`}finally{btn.disabled=false;btn.textContent=old}}
 async function addArenaFriend(code){const friendCode=String(code||arenaFriendId.value).trim();if(!friendCode)return toast('請輸入好友代碼');try{await api('/api/arena/friends',{method:'POST',body:JSON.stringify({friendCode})});toast('已互相加入競技好友');arenaFriendSearchResults.innerHTML='';await loadArena()}catch(e){toast(e.message==='PLAYER_NOT_FOUND'?'找不到此玩家':'加入失敗：'+e.message)}}
 async function sparArena(target){const id=String(target||'').trim();if(!id)return toast('請從好友列表或搜尋結果選擇玩家');try{const r=await api('/api/arena/spar',{method:'POST',body:JSON.stringify({targetPlayerId:id})});showArenaReplay(r.replay,r.result);toast(r.result==='WIN'?'切磋勝利（不影響積分）':'切磋失敗（不影響積分）');await loadArena()}catch(e){toast('切磋失敗：'+e.message)}}
 async function loadArenaLeaderboard(scope='global'){ARENA_RANK_SCOPE=scope;try{const r=await api(`/api/arena/leaderboard?scope=${encodeURIComponent(scope)}`);arenaLeaderboard.innerHTML=(r.rows||[]).length?r.rows.map(x=>`<div class="ranking-row ${x.isMe?'me':''}"><div class="rank">${x.rank}</div><div class="grow"><b>${escapeHtml(x.displayName)}</b><small style="display:block">${escapeHtml(x.tier)}・最高 ${escapeHtml(x.highestTier)}・${x.wins} 勝</small></div><strong>${x.rating}</strong></div>`).join(''):`<div class="info-box">${escapeHtml(r.message||'此排行榜目前沒有資料。')}</div>`}catch(e){arenaLeaderboard.innerHTML='<div class="info-box">排行榜讀取失敗。</div>'}}
+function arenaLogRow(x){return `<div class="ranking-row ${x.result==='WIN'?'arena-win':'arena-lose'}"><div class="rank">${x.result==='WIN'?'勝':'敗'}</div><div class="grow"><b>${x.wasDefense?'防守：':'挑戰：'}${escapeHtml(x.opponentName||'未知玩家')}</b><small style="display:block">${formatAnnouncementDate(x.createdAt)}・${x.battleType==='SPAR'?'好友切磋':'積分 '+(x.ratingDelta>=0?'+':'')+x.ratingDelta}</small></div><button class="text-btn ${x.favorite?'active':''}" data-arena-favorite="${x.id}">${x.favorite?'★':'☆'}</button><button class="text-btn" data-arena-replay="${x.id}">回放</button><button class="text-btn danger-text" data-arena-delete="${x.id}">刪除</button></div>`}
+async function loadArenaLogs(page=1){ARENA_LOG_PAGE=Math.max(1,Number(page)||1);if(window.arenaLogs)arenaLogs.innerHTML='<div class="info-box">戰鬥紀錄讀取中…</div>';const qs=new URLSearchParams({page:String(ARENA_LOG_PAGE),pageSize:'10',q:ARENA_LOG_QUERY,range:ARENA_LOG_RANGE});try{const r=await api(`/api/arena/logs?${qs.toString()}`);ARENA_LOG_PAGE=r.page||1;arenaLogs.innerHTML=(r.rows||[]).length?r.rows.map(arenaLogRow).join(''):'<div class="info-box">沒有符合條件的戰鬥紀錄。</div>';arenaLogsPagination.innerHTML=`<button class="secondary" data-arena-log-page="${ARENA_LOG_PAGE-1}" ${ARENA_LOG_PAGE<=1?'disabled':''}>上一頁</button><span>第 ${r.page||1} / ${r.totalPages||1} 頁・共 ${r.total||0} 筆</span><button class="secondary" data-arena-log-page="${ARENA_LOG_PAGE+1}" ${ARENA_LOG_PAGE>=(r.totalPages||1)?'disabled':''}>下一頁</button>`}catch(e){arenaLogs.innerHTML=`<div class="info-box">戰鬥紀錄讀取失敗：${escapeHtml(e.message)}</div>`}}
+async function toggleArenaFavorite(id){try{await api(`/api/arena/replay/${encodeURIComponent(id)}/favorite`,{method:'POST',body:'{}'});await loadArenaLogs(ARENA_LOG_PAGE)}catch(e){toast('收藏更新失敗：'+e.message)}}
+async function deleteArenaReplay(id){if(!confirm('確定刪除這筆戰鬥紀錄與回放？'))return;try{await api(`/api/arena/replay/${encodeURIComponent(id)}`,{method:'DELETE'});toast('已刪除戰鬥紀錄');arenaReplay.classList.add('hidden');await loadArenaLogs(ARENA_LOG_PAGE)}catch(e){toast('刪除失敗：'+e.message)}}
 async function claimArenaReward(type){try{const r=await api('/api/arena/rewards',{method:'POST',body:JSON.stringify({type})});state=r.state||state;localStorage.setItem('starRealmRpgSave',JSON.stringify(state));toast(`已領取：鑽石 ${r.reward.gems||0}、競技幣 ${r.reward.arenaCoins||0}`);await loadArena();renderAll()}catch(e){toast('目前尚不可領取')}}
-if(window.saveArenaDefense)saveArenaDefense.onclick=saveArenaDefenseTeam;if(window.refreshArena)refreshArena.onclick=refreshArenaOpponents;if(window.addArenaFriend)addArenaFriend.onclick=addArenaFriend;if(window.sparArenaFriend)sparArenaFriend.onclick=()=>sparArena('');
-document.addEventListener('click',e=>{const c=e.target.closest('[data-arena-challenge]');if(c){challengeArena(c.dataset.arenaChallenge);return}const rp=e.target.closest('[data-arena-replay]');if(rp){loadArenaReplay(rp.dataset.arenaReplay);return}const fr=e.target.closest('[data-arena-friend]');if(fr){sparArena(fr.dataset.arenaFriend);return}const add=e.target.closest('[data-add-arena-friend]');if(add){addArenaFriend(add.dataset.addArenaFriend);return}const ss=e.target.closest('[data-spar-search]');if(ss){sparArena(ss.dataset.sparSearch);return}const rank=e.target.closest('[data-arena-rank]');if(rank){document.querySelectorAll('[data-arena-rank]').forEach(x=>x.classList.toggle('active',x===rank));loadArenaLeaderboard(rank.dataset.arenaRank);return}const reward=e.target.closest('[data-arena-reward]');if(reward){claimArenaReward(reward.dataset.arenaReward);return}if(e.target.closest('[data-close-replay]'))arenaReplay.classList.add('hidden')});
+if(window.saveArenaDefense)saveArenaDefense.onclick=saveArenaDefenseTeam;if(window.refreshArena)refreshArena.onclick=refreshArenaOpponents;if(window.searchArenaFriend)searchArenaFriend.onclick=searchArenaFriend;if(window.arenaFriendId)arenaFriendId.onkeydown=e=>{if(e.key==='Enter')searchArenaFriend()};if(window.addArenaFriend)addArenaFriend.onclick=addArenaFriend;if(window.sparArenaFriend)sparArenaFriend.onclick=()=>sparArena('');if(window.copyArenaFriendCode)copyArenaFriendCode.onclick=async()=>{const code=arenaFriendCode.textContent.trim();if(!code||code==='尚未建立')return toast('尚未建立好友代碼');try{await navigator.clipboard.writeText(code);toast('好友代碼已複製')}catch{toast('請長按複製好友代碼')}};if(window.arenaLogSearchBtn)arenaLogSearchBtn.onclick=()=>{ARENA_LOG_QUERY=arenaLogSearch.value.trim();loadArenaLogs(1)};if(window.arenaLogSearch)arenaLogSearch.onkeydown=e=>{if(e.key==='Enter'){ARENA_LOG_QUERY=arenaLogSearch.value.trim();loadArenaLogs(1)}};if(window.arenaLogRange)arenaLogRange.onchange=()=>{ARENA_LOG_RANGE=arenaLogRange.value;loadArenaLogs(1)};
+document.addEventListener('click',e=>{const c=e.target.closest('[data-arena-challenge]');if(c){challengeArena(c.dataset.arenaChallenge);return}const rp=e.target.closest('[data-arena-replay]');if(rp){loadArenaReplay(rp.dataset.arenaReplay);return}const fr=e.target.closest('[data-arena-friend]');if(fr){sparArena(fr.dataset.arenaFriend);return}const add=e.target.closest('[data-add-arena-friend]');if(add){addArenaFriend(add.dataset.addArenaFriend);return}const ss=e.target.closest('[data-spar-search]');if(ss){sparArena(ss.dataset.sparSearch);return}const rank=e.target.closest('[data-arena-rank]');if(rank){document.querySelectorAll('[data-arena-rank]').forEach(x=>x.classList.toggle('active',x===rank));loadArenaLeaderboard(rank.dataset.arenaRank);return}const reward=e.target.closest('[data-arena-reward]');if(reward){claimArenaReward(reward.dataset.arenaReward);return}const lp=e.target.closest('[data-arena-log-page]');if(lp&&!lp.disabled){loadArenaLogs(lp.dataset.arenaLogPage);return}const fp=e.target.closest('[data-arena-favorite]');if(fp){toggleArenaFavorite(fp.dataset.arenaFavorite);return}const del=e.target.closest('[data-arena-delete]');if(del){deleteArenaReplay(del.dataset.arenaDelete);return}const rpg=e.target.closest('[data-replay-page]');if(rpg&&!rpg.disabled){ARENA_REPLAY_STATE.page=Number(rpg.dataset.replayPage)||1;renderArenaReplayPage();return}const speedBtn=e.target.closest('[data-replay-speed]');if(speedBtn){ARENA_REPLAY_STATE.speed=Number(speedBtn.dataset.replaySpeed)||1;renderArenaReplayPage();return}if(e.target.closest('[data-close-replay]'))arenaReplay.classList.add('hidden')});
