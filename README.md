@@ -1,8 +1,8 @@
-# 星界遠征 v1.8：完整非同步競技場
+# 星界遠征 v1.8.2：完整非同步競技場
 
 本版由 v1.7.7 原地升級。前台不顯示內部版本號，版本僅保留於 GM 管理後台。
 
-## v1.8 新增功能
+## v1.8.2 新增功能
 
 - 3 名對手 MMR 配對：同時參考積分與隊伍戰力。
 - 對手刷新：每 30 分鐘免費刷新；冷卻期間可花 20 鑽石刷新。
@@ -21,19 +21,19 @@
 ### 1. 進入 Worker 目錄
 
 ```bash
-cd card-adventure-rpg-v1.8/worker
+cd card-adventure-rpg-v1.8.2/worker
 ```
 
 ### 2. 備份正式 D1
 
 ```bash
-npx wrangler d1 export card-adventure-rpg-db --remote --output=backup-before-v1.8.sql --config wrangler.toml
+npx wrangler d1 export card-adventure-rpg-db --remote --output=backup-before-v1.8.2.sql --config wrangler.toml
 ```
 
-### 3. 執行 v1.8 Migration
+### 3. 執行 v1.8.2 Migration
 
 ```bash
-npx wrangler d1 execute card-adventure-rpg-db --remote --file=./migrate-v1.7.7-to-v1.8.sql --config wrangler.toml
+npx wrangler d1 execute card-adventure-rpg-db --remote --file=./migrate-v1.8-to-v1.8.2.sql --config wrangler.toml
 ```
 
 Migration 新增競技場防守策略、最高積分、連勝、對手刷新、回放、好友及獎勵資料表。
@@ -49,7 +49,7 @@ npx wrangler deploy --config wrangler.toml
 部署後請強制重新整理瀏覽器或清除舊 PWA 快取。Service Worker 快取名稱已更新為：
 
 ```text
-starrealm-v1.8
+starrealm-v1.8.2
 ```
 
 ## 測試方式
@@ -74,3 +74,13 @@ name = "card-adventure-rpg"
 ```toml
 run_worker_first = ["/api/*", "/auth/*", "/media/*"]
 ```
+
+
+## v1.8 升級至 v1.8.2
+```bash
+cd worker
+npx wrangler d1 execute card-adventure-rpg-db --remote --file=./migrate-v1.8-to-v1.8.2.sql --config wrangler.toml
+npx wrangler deploy --config wrangler.toml
+```
+
+v1.8.2 將競技勝負改為同一份伺服器 HP 戰鬥模擬，並新增好友代碼與名稱搜尋。

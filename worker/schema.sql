@@ -278,6 +278,7 @@ CREATE TABLE IF NOT EXISTS arena_profiles (
   losses INTEGER NOT NULL DEFAULT 0,
   defense_team_json TEXT NOT NULL DEFAULT '[]',
   defense_strategy TEXT NOT NULL DEFAULT 'BALANCED',
+  friend_code TEXT,
   season_key TEXT NOT NULL DEFAULT 'season-1',
   highest_rating INTEGER NOT NULL DEFAULT 1000,
   season_high_rating INTEGER NOT NULL DEFAULT 1000,

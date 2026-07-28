@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v1.8
+## v1.8.2
 
 ### 新增
 - 完整非同步競技場、MMR 配對與三名對手刷新。
@@ -12,10 +12,10 @@
 - 全服、好友、公會排行榜。
 
 ### 資料庫
-- 新增 `migrate-v1.7.7-to-v1.8.sql`。
+- 新增 `migrate-v1.7.7-to-v1.8.2.sql`。
 - 新增 `arena_reward_claims`、`arena_friendships`。
 - 擴充 `arena_profiles` 與 `arena_battles`。
 
 ### 版本
-- GM 後台版本更新為 v1.8。
-- Service Worker 快取更新為 v1.8。
+- GM 後台版本更新為 v1.8.2。
+- Service Worker 快取更新為 v1.8.2。

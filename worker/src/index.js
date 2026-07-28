@@ -10,7 +10,7 @@ const STAGES={
 const SHOP={energyPotion:{price:600,kind:"item"},potion:{price:300,kind:"item"},wood:{price:180,kind:"material"},ore:{price:260,kind:"material"},herb:{price:220,kind:"material"},sword:{price:1800,kind:"equipment"},armor:{price:2200,kind:"equipment"}};
 const DEFAULT_STATE={gold:1200,gems:1200,energy:30,maxEnergy:30,stageUnlocked:1,dailyClaimed:"",team:["aria","mira","gorn"],owned:{aria:{level:1,rank:1,xp:0,copies:1,equipment:{}},mira:{level:1,rank:1,xp:0,copies:1,equipment:{}},gorn:{level:1,rank:1,xp:0,copies:1,equipment:{}}},inventory:{wood:0,ore:0,herb:0,core:0,potion:3,energyPotion:0,equipment:{sword:1,armor:1}},tutorialDone:false,sound:true};
 export default{async fetch(req,env){const u=new URL(req.url);try{
-if(u.pathname==="/api/health")return J({ok:true,version:"1.8",serverAuthoritative:true,admin:true});
+if(u.pathname==="/api/health")return J({ok:true,version:"1.8.2",serverAuthoritative:true,admin:true});
 if(u.pathname==="/api/diagnostics/line")return await lineDiagnostics(env,req);
 if(u.pathname==="/auth/line/start")return await startLine(req,env);if(u.pathname==="/auth/line/callback")return await callback(req,env);
 if(u.pathname==="/api/logout"&&req.method==="POST")return await logout(req,env);
@@ -53,6 +53,7 @@ if(u.pathname==="/api/arena/refresh"&&req.method==="POST")return arenaRefresh(re
 if(u.pathname==="/api/arena/challenge"&&req.method==="POST")return arenaChallenge(req,env,a);
 if(u.pathname==="/api/arena/spar"&&req.method==="POST")return arenaSpar(req,env,a);
 if(u.pathname==="/api/arena/friends"&&req.method==="POST")return arenaAddFriend(req,env,a);
+if(u.pathname==="/api/arena/friend-search"&&req.method==="GET")return arenaFriendSearch(req,env,a);
 if(u.pathname==="/api/arena/leaderboard"&&req.method==="GET")return arenaLeaderboard(req,env,a);
 if(u.pathname==="/api/arena/rewards"&&req.method==="POST")return arenaClaimReward(req,env,a);
 if(/^\/api\/arena\/replay\/[^/]+$/.test(u.pathname)&&req.method==="GET")return arenaReplay(env,a,u.pathname.split("/")[4]);
@@ -198,7 +199,7 @@ async function publicCatalog(env){
     loginRewards:await rows(env,"SELECT * FROM gm_login_rewards WHERE active=1 ORDER BY campaign_key,day_index"),
     announcements:await rows(env,"SELECT * FROM gm_announcements_v2 WHERE active=1 AND (NULLIF(starts_at,'') IS NULL OR starts_at<=?) AND (NULLIF(ends_at,'') IS NULL OR ends_at>?) ORDER BY pinned DESC,priority DESC,created_at DESC",[now,now]),
     banners:await rows(env,"SELECT * FROM gm_banners WHERE active=1 AND (NULLIF(starts_at,'') IS NULL OR starts_at<=?) AND (NULLIF(ends_at,'') IS NULL OR ends_at>?) ORDER BY sort_order,created_at DESC",[now,now]),
-    version:"1.8"
+    version:"1.8.2"
   });
 }
 async function catalogList(env,e){const t=CATALOG_TABLES[e];if(!t)return J({error:"UNKNOWN_ENTITY"},404);return J({rows:await rows(env,`SELECT * FROM ${t} ORDER BY updated_at DESC`)})}
@@ -237,21 +238,56 @@ async function claimMail(env,a,id){const m=await env.DB.prepare("SELECT * FROM p
 function arenaTier(rating){
   if(rating>=2200)return "傳奇";if(rating>=1900)return "星耀";if(rating>=1600)return "鑽石";if(rating>=1400)return "白金";if(rating>=1200)return "黃金";if(rating>=1050)return "白銀";return rating>=950?"青銅 I":rating>=850?"青銅 II":"青銅 III";
 }
-function arenaPower(s,team){
-  return (team||[]).reduce((total,id)=>{const h=s.owned?.[id];if(!h)return total;const lv=Number(h.level||1),rank=Number(h.rank||1),skill=Number(h.skillLevel||1);return total+Math.round(900+lv*145+rank*230+skill*55)},0)+Number(s.stageUnlocked||1)*50;
+const ARENA_HERO_BASE={
+ aria:{hp:1500,atk:235,def:95,spd:108,crit:.18,role:"DPS"},
+ mira:{hp:1180,atk:255,def:70,spd:102,crit:.14,role:"DPS"},
+ gorn:{hp:2100,atk:125,def:180,spd:82,crit:.06,role:"TANK"},
+ luna:{hp:1420,atk:165,def:95,spd:105,crit:.10,role:"HEAL"},
+ kael:{hp:1220,atk:285,def:72,spd:120,crit:.30,role:"DPS"},
+ elwyn:{hp:1300,atk:220,def:82,spd:112,crit:.20,role:"DPS"},
+ sol:{hp:1850,atk:220,def:135,spd:96,crit:.12,role:"BRUISER"},
+ nyx:{hp:1280,atk:270,def:75,spd:110,crit:.25,role:"DPS"}
+};
+function arenaUnitStats(s,id){
+ const h=s.owned?.[id]||{level:1,rank:1,skillLevel:1,equipment:{}},b=ARENA_HERO_BASE[id]||ARENA_HERO_BASE.aria;
+ const lv=Math.max(1,Number(h.level||1)),rank=Math.max(1,Number(h.rank||1)),skill=Math.max(1,Number(h.skillLevel||1));
+ let equipLv=0,refine=0;for(const eq of Object.values(h.equipment||{})){if(!eq)continue;const m=s.equipmentMeta?.[eq]||{};equipLv+=Number(m.level||0);refine+=Number(m.refine||0)}
+ const mult=1+(lv-1)*.075+(rank-1)*.16+equipLv*.025+refine*.06;
+ return{id,name:id,maxHp:Math.round(b.hp*mult),hp:Math.round(b.hp*mult),atk:Math.round(b.atk*mult*(1+(skill-1)*.025)),def:Math.round(b.def*mult),spd:Math.round(b.spd+(lv-1)*.25+rank*2),crit:Math.min(.65,b.crit+(skill-1)*.01+refine*.015),role:b.role,level:lv,rank,skill};
+}
+function arenaPower(s,team){return (team||[]).reduce((t,id)=>{const u=arenaUnitStats(s,id);return t+Math.round(u.maxHp*.34+u.atk*4.1+u.def*3.2+u.spd*2)},0)}
+function seededRandom(seed){let h=2166136261;for(const c of seed)h=Math.imul(h^c.charCodeAt(0),16777619);return()=>{h+=0x6D2B79F5;let t=h;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+function aliveUnits(team){return team.filter(x=>x.hp>0)}
+function chooseTarget(units,strategy,rng){const alive=aliveUnits(units);if(!alive.length)return null;if(strategy==="FOCUS")return [...alive].sort((a,b)=>a.hp-b.hp)[0];if(strategy==="HEAL")return [...alive].sort((a,b)=>b.atk-a.atk)[0];return alive[Math.floor(rng()*alive.length)]}
+function simulateArenaBattle(myState,myTeamIds,enemyState,enemyTeamIds,myStrategy,enemyStrategy,seed){
+ const rng=seededRandom(seed),A=myTeamIds.map(id=>arenaUnitStats(myState,id)),D=enemyTeamIds.map(id=>arenaUnitStats(enemyState,id));
+ const turns=[];let round=0;
+ while(aliveUnits(A).length&&aliveUnits(D).length&&round<60){round++;const order=[...aliveUnits(A).map(u=>({u,side:"ATTACKER"})),...aliveUnits(D).map(u=>({u,side:"DEFENDER"}))].sort((x,y)=>y.u.spd-x.u.spd+(rng()-.5)*8);
+  for(const entry of order){const actor=entry.u;if(actor.hp<=0)continue;const allies=entry.side==="ATTACKER"?A:D,enemies=entry.side==="ATTACKER"?D:A,strategy=entry.side==="ATTACKER"?myStrategy:enemyStrategy;
+   if(!aliveUnits(enemies).length)break;
+   const low=[...aliveUnits(allies)].sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];
+   const canHeal=(actor.role==="HEAL"||strategy==="HEAL")&&low&&low.hp/low.maxHp<.62&&rng()<.58;
+   if(canHeal){const before=low.hp,amount=Math.round(actor.atk*(1.1+actor.skill*.04));low.hp=Math.min(low.maxHp,low.hp+amount);turns.push({round,side:entry.side,actor:actor.id,target:low.id,action:"HEAL",value:low.hp-before,targetHp:low.hp,targetMaxHp:low.maxHp,critical:false});continue}
+   const target=chooseTarget(enemies,strategy,rng);if(!target)break;const crit=rng()<actor.crit;const variance=.92+rng()*.16;const raw=actor.atk*(crit?1.75:1)*variance;const dmg=Math.max(1,Math.round(raw*100/(100+target.def)));target.hp=Math.max(0,target.hp-dmg);
+   turns.push({round,side:entry.side,actor:actor.id,target:target.id,action:strategy==="FOCUS"?"FOCUS_ATTACK":"ATTACK",value:dmg,targetHp:target.hp,targetMaxHp:target.maxHp,critical:crit,defeated:target.hp<=0});
+  }
+ }
+ const win=aliveUnits(A).length>0&&aliveUnits(D).length===0;turns.push({round:round+1,side:"SYSTEM",action:"RESULT",result:win?"WIN":"LOSE",attackerRemaining:aliveUnits(A).length,defenderRemaining:aliveUnits(D).length});
+ return{win,turns,attackerPower:arenaPower(myState,myTeamIds),defenderPower:arenaPower(enemyState,enemyTeamIds)};
 }
 function arenaSeasonKey(){const d=new Date(),y=d.getUTCFullYear(),m=String(d.getUTCMonth()+1).padStart(2,"0");return `${y}-${m}`}
 function arenaWeekKey(){const d=new Date(),first=new Date(Date.UTC(d.getUTCFullYear(),0,1)),days=Math.floor((d-first)/86400000),week=Math.ceil((days+first.getUTCDay()+1)/7);return `${d.getUTCFullYear()}-W${String(week).padStart(2,"0")}`}
 async function ensureArenaProfile(env,a,s){
   let p=await env.DB.prepare("SELECT * FROM arena_profiles WHERE player_id=?").bind(a.id).first();
-  if(!p){await env.DB.prepare("INSERT INTO arena_profiles(player_id,defense_team_json,season_key)VALUES(?,?,?)").bind(a.id,JSON.stringify((s.team||[]).slice(0,3)),arenaSeasonKey()).run();p=await env.DB.prepare("SELECT * FROM arena_profiles WHERE player_id=?").bind(a.id).first()}
+  if(!p){const code="SR-"+String(a.id).replace(/-/g,"").slice(0,8).toUpperCase();await env.DB.prepare("INSERT INTO arena_profiles(player_id,defense_team_json,season_key,friend_code)VALUES(?,?,?,?)").bind(a.id,JSON.stringify((s.team||[]).slice(0,3)),arenaSeasonKey(),code).run();p=await env.DB.prepare("SELECT * FROM arena_profiles WHERE player_id=?").bind(a.id).first()}
+  if(!p.friend_code){const code="SR-"+String(a.id).replace(/-/g,"").slice(0,8).toUpperCase();await env.DB.prepare("UPDATE arena_profiles SET friend_code=? WHERE player_id=?").bind(code,a.id).run();p.friend_code=code}
   if(p.season_key!==arenaSeasonKey()){
     await env.DB.prepare("UPDATE arena_profiles SET rating=1000,wins=0,losses=0,current_streak=0,season_key=?,season_high_rating=1000,updated_at=CURRENT_TIMESTAMP WHERE player_id=?").bind(arenaSeasonKey(),a.id).run();
     p=await env.DB.prepare("SELECT * FROM arena_profiles WHERE player_id=?").bind(a.id).first();
   }
   return p;
 }
-function arenaProfileJson(p){const wins=Number(p.wins||0),losses=Number(p.losses||0),total=wins+losses;return{rating:Number(p.rating||1000),tier:arenaTier(Number(p.rating||1000)),arenaCoins:Number(p.arena_coins||0),wins,losses,winRate:total?Math.round(wins*1000/total)/10:0,defenseTeam:parse(p.defense_team_json,[]),defenseStrategy:p.defense_strategy||"BALANCED",highestRating:Number(p.highest_rating||p.rating||1000),highestTier:arenaTier(Number(p.highest_rating||p.rating||1000)),currentStreak:Number(p.current_streak||0),bestStreak:Number(p.best_streak||0),seasonKey:p.season_key||arenaSeasonKey()}}
+function arenaProfileJson(p){const wins=Number(p.wins||0),losses=Number(p.losses||0),total=wins+losses;return{rating:Number(p.rating||1000),tier:arenaTier(Number(p.rating||1000)),arenaCoins:Number(p.arena_coins||0),wins,losses,winRate:total?Math.round(wins*1000/total)/10:0,defenseTeam:parse(p.defense_team_json,[]),defenseStrategy:p.defense_strategy||"BALANCED",highestRating:Number(p.highest_rating||p.rating||1000),highestTier:arenaTier(Number(p.highest_rating||p.rating||1000)),currentStreak:Number(p.current_streak||0),bestStreak:Number(p.best_streak||0),seasonKey:p.season_key||arenaSeasonKey(),friendCode:p.friend_code||""}}
 function arenaStrategyLabel(v){return({BALANCED:"均衡",FOCUS:"優先集火",HEAL:"優先治療"})[v]||"均衡"}
 function arenaRewardDefs(){return{daily:{target:3,reward:{arenaCoins:80,gems:30}},weekly:{target:10,reward:{arenaCoins:300,gems:120}},season:{target:1,reward:{arenaCoins:500,gems:200}}}}
 async function arenaRewardState(env,a,p){
@@ -276,9 +312,10 @@ async function arenaStatus(req,env,a){
   if(opponents.length){const qs=opponents.map(()=>'?').join(',');rows=(await env.DB.prepare(`SELECT p.id,p.display_name,ap.rating,ap.defense_team_json,ap.defense_strategy,gs.state_json FROM players p JOIN arena_profiles ap ON ap.player_id=p.id JOIN game_saves gs ON gs.player_id=p.id WHERE p.id IN (${qs})`).bind(...opponents).all()).results}
   if(rows.length<1){const picked=await arenaPickOpponents(env,a,p,s);opponents=picked.map(x=>x.id);await env.DB.prepare("UPDATE arena_profiles SET opponent_ids_json=?,next_free_refresh_at=datetime(CURRENT_TIMESTAMP,'+30 minutes') WHERE player_id=?").bind(JSON.stringify(opponents),a.id).run();rows=picked.map(x=>({...x,state_json:null,defense_team_json:JSON.stringify(x.team),defense_strategy:x.strategy}))}
   const list=rows.map(x=>{if(x.matchScore!==undefined)return x;const os=parse(x.state_json,structuredClone(DEFAULT_STATE)),team=parse(x.defense_team_json,os.team||[]);return{id:x.id,displayName:x.display_name,rating:Number(x.rating||1000),tier:arenaTier(Number(x.rating||1000)),team,power:arenaPower(os,team),strategy:x.defense_strategy||"BALANCED",strategyLabel:arenaStrategyLabel(x.defense_strategy)}});
-  const logs=(await env.DB.prepare(`SELECT b.battle_key,b.result,b.rating_delta,b.created_at,b.opponent_id,b.battle_type,p.display_name opponent_name
-    FROM arena_battles b LEFT JOIN players p ON p.id=b.opponent_id WHERE b.player_id=? OR b.opponent_id=? ORDER BY b.id DESC LIMIT 20`).bind(a.id,a.id).all()).results;
-  const friends=(await env.DB.prepare(`SELECT p.id,p.display_name FROM arena_friendships f JOIN players p ON p.id=f.friend_player_id WHERE f.player_id=? ORDER BY p.display_name LIMIT 50`).bind(a.id).all()).results;
+  const logs=(await env.DB.prepare(`SELECT b.battle_key,b.result,b.rating_delta,b.created_at,b.player_id,b.opponent_id,b.battle_type,
+      CASE WHEN b.player_id=? THEN op.display_name ELSE atk.display_name END opponent_name
+    FROM arena_battles b LEFT JOIN players op ON op.id=b.opponent_id LEFT JOIN players atk ON atk.id=b.player_id WHERE b.player_id=? OR b.opponent_id=? ORDER BY b.id DESC LIMIT 20`).bind(a.id,a.id,a.id).all()).results;
+  const friends=(await env.DB.prepare(`SELECT p.id,p.display_name,ap.friend_code FROM arena_friendships f JOIN players p ON p.id=f.friend_player_id LEFT JOIN arena_profiles ap ON ap.player_id=p.id WHERE f.player_id=? ORDER BY p.display_name LIMIT 50`).bind(a.id).all()).results;
   const rewards=await arenaRewardState(env,a,p);
   return J({profile:arenaProfileJson(p),remaining:Math.max(0,5-used),opponents:list,logs:logs.map(x=>({id:x.battle_key||String(x.id),result:x.opponent_id===a.id?(x.result==="WIN"?"LOSE":"WIN"):x.result,ratingDelta:x.opponent_id===a.id?-Number(x.rating_delta||0):Number(x.rating_delta||0),createdAt:x.created_at,opponentName:x.opponent_name||"未知玩家",battleType:x.battle_type||"RANKED",wasDefense:x.opponent_id===a.id})),friends,rewards,nextFreeRefreshAt:p.next_free_refresh_at||null,refreshGemCost:20})
 }
@@ -297,22 +334,23 @@ function arenaReplayTurns(myTeam,enemyTeam,myPower,enemyPower,myStrategy,enemySt
   const turns=[],rounds=6;for(let i=0;i<rounds;i++){const mine=i%2===0,team=mine?myTeam:enemyTeam,target=mine?enemyTeam:myTeam,actor=team[i%Math.max(1,team.length)]||"aria",victim=target[(i+1)%Math.max(1,target.length)]||"gorn",base=Math.round((mine?myPower:enemyPower)/Math.max(1,team.length)/8),strategy=mine?myStrategy:enemyStrategy;turns.push({round:i+1,side:mine?"ATTACKER":"DEFENDER",actor,target:victim,action:strategy==="HEAL"&&i%3===1?"HEAL":strategy==="FOCUS"?"FOCUS_ATTACK":"ATTACK",value:strategy==="HEAL"&&i%3===1?Math.round(base*.55):Math.round(base*(.85+Math.random()*.3))})}turns.push({round:rounds+1,side:"SYSTEM",action:"RESULT",result:win?"WIN":"LOSE"});return turns;
 }
 async function arenaChallenge(req,env,a){
-  const {opponentId}=await req.json();if(!opponentId||opponentId===a.id)return J({error:"INVALID_OPPONENT"},400);
-  const date=taipeiDate(),s=await stateOf(env,a.id),p=await ensureArenaProfile(env,a,s),daily=await env.DB.prepare("SELECT used_count FROM arena_daily_attempts WHERE player_id=? AND attempt_date=?").bind(a.id,date).first();
-  if(Number(daily?.used_count||0)>=5)return J({error:"ARENA_DAILY_LIMIT",message:"ARENA_DAILY_LIMIT"},409);
-  const o=await env.DB.prepare(`SELECT p.display_name,ap.rating,ap.defense_team_json,ap.defense_strategy,gs.state_json FROM players p JOIN arena_profiles ap ON ap.player_id=p.id JOIN game_saves gs ON gs.player_id=p.id WHERE p.id=?`).bind(opponentId).first();if(!o)return J({error:"OPPONENT_NOT_FOUND"},404);
-  const os=parse(o.state_json,structuredClone(DEFAULT_STATE)),myTeam=(s.team||[]).slice(0,3),enemyTeam=parse(o.defense_team_json,os.team||[]),myPower=arenaPower(s,myTeam),enemyPower=arenaPower(os,enemyTeam),myStrategy="BALANCED",enemyStrategy=o.defense_strategy||"BALANCED";
-  const strategyBonus=enemyStrategy==="FOCUS"?0.025:enemyStrategy==="HEAL"?-0.015:0,chance=Math.max(.15,Math.min(.85,.5+(myPower-enemyPower)/Math.max(1800,myPower+enemyPower)-strategyBonus)),win=Math.random()<chance,result=win?"WIN":"LOSE",ratingDelta=win?25:-15,coins=win?30:10,newRating=Math.max(0,Number(p.rating||1000)+ratingDelta),streak=win?Number(p.current_streak||0)+1:0,high=Math.max(Number(p.highest_rating||1000),newRating),seasonHigh=Math.max(Number(p.season_high_rating||1000),newRating),replay=arenaReplayTurns(myTeam,enemyTeam,myPower,enemyPower,myStrategy,enemyStrategy,win);
-  const opponentNewRating=Math.max(0,Number(o.rating||1000)-ratingDelta),opponentStreak=win?0:1;
-  const battleId=crypto.randomUUID();await env.DB.batch([
-    env.DB.prepare(`INSERT INTO arena_daily_attempts(player_id,attempt_date,used_count)VALUES(?,?,1) ON CONFLICT(player_id,attempt_date) DO UPDATE SET used_count=used_count+1`).bind(a.id,date),
-    env.DB.prepare("UPDATE arena_profiles SET rating=?,arena_coins=arena_coins+?,wins=wins+?,losses=losses+?,current_streak=?,best_streak=MAX(best_streak,?),highest_rating=?,season_high_rating=?,updated_at=CURRENT_TIMESTAMP WHERE player_id=?").bind(newRating,coins,win?1:0,win?0:1,streak,streak,high,seasonHigh,a.id),
-    env.DB.prepare("UPDATE arena_profiles SET rating=?,wins=wins+?,losses=losses+?,current_streak=?,best_streak=MAX(best_streak,?),highest_rating=MAX(highest_rating,?),season_high_rating=MAX(season_high_rating,?),updated_at=CURRENT_TIMESTAMP WHERE player_id=?").bind(opponentNewRating,win?0:1,win?1:0,opponentStreak,opponentStreak,opponentNewRating,opponentNewRating,opponentId),
-    env.DB.prepare("INSERT INTO arena_battles(battle_key,player_id,opponent_id,result,rating_delta,player_power,opponent_power,reward_json,replay_json,battle_type)VALUES(?,?,?,?,?,?,?,?,?,?)").bind(battleId,a.id,opponentId,result,ratingDelta,myPower,enemyPower,JSON.stringify({arenaCoins:coins}),JSON.stringify(replay),"RANKED")
-  ]);return J({battleId,result,ratingDelta,arenaCoinsEarned:coins,playerPower:myPower,opponentPower:enemyPower,state:s,replay})
+ const {opponentId}=await req.json();if(!opponentId||opponentId===a.id)return J({error:"INVALID_OPPONENT"},400);
+ const date=taipeiDate(),s=await stateOf(env,a.id),p=await ensureArenaProfile(env,a,s),daily=await env.DB.prepare("SELECT used_count FROM arena_daily_attempts WHERE player_id=? AND attempt_date=?").bind(a.id,date).first();
+ if(Number(daily?.used_count||0)>=5)return J({error:"ARENA_DAILY_LIMIT",message:"ARENA_DAILY_LIMIT"},409);
+ const o=await env.DB.prepare(`SELECT p.display_name,ap.rating,ap.defense_team_json,ap.defense_strategy,gs.state_json FROM players p JOIN arena_profiles ap ON ap.player_id=p.id JOIN game_saves gs ON gs.player_id=p.id WHERE p.id=?`).bind(opponentId).first();if(!o)return J({error:"OPPONENT_NOT_FOUND"},404);
+ const os=parse(o.state_json,structuredClone(DEFAULT_STATE)),myTeam=(s.team||[]).filter(id=>s.owned?.[id]).slice(0,3),enemyTeam=parse(o.defense_team_json,os.team||[]).filter(id=>os.owned?.[id]).slice(0,3),myStrategy="BALANCED",enemyStrategy=o.defense_strategy||"BALANCED";
+ const battleId=crypto.randomUUID(),sim=simulateArenaBattle(s,myTeam,os,enemyTeam,myStrategy,enemyStrategy,battleId),win=sim.win,result=win?"WIN":"LOSE",ratingDelta=win?25:-15,coins=win?30:10,newRating=Math.max(0,Number(p.rating||1000)+ratingDelta),streak=win?Number(p.current_streak||0)+1:0,high=Math.max(Number(p.highest_rating||1000),newRating),seasonHigh=Math.max(Number(p.season_high_rating||1000),newRating);
+ const opponentNewRating=Math.max(0,Number(o.rating||1000)-ratingDelta),opponentStreak=win?0:1;
+ await env.DB.batch([
+  env.DB.prepare(`INSERT INTO arena_daily_attempts(player_id,attempt_date,used_count)VALUES(?,?,1) ON CONFLICT(player_id,attempt_date) DO UPDATE SET used_count=used_count+1`).bind(a.id,date),
+  env.DB.prepare("UPDATE arena_profiles SET rating=?,arena_coins=arena_coins+?,wins=wins+?,losses=losses+?,current_streak=?,best_streak=MAX(best_streak,?),highest_rating=?,season_high_rating=?,updated_at=CURRENT_TIMESTAMP WHERE player_id=?").bind(newRating,coins,win?1:0,win?0:1,streak,streak,high,seasonHigh,a.id),
+  env.DB.prepare("UPDATE arena_profiles SET rating=?,wins=wins+?,losses=losses+?,current_streak=?,best_streak=MAX(best_streak,?),highest_rating=MAX(highest_rating,?),season_high_rating=MAX(season_high_rating,?),updated_at=CURRENT_TIMESTAMP WHERE player_id=?").bind(opponentNewRating,win?0:1,win?1:0,opponentStreak,opponentStreak,opponentNewRating,opponentNewRating,opponentId),
+  env.DB.prepare("INSERT INTO arena_battles(battle_key,player_id,opponent_id,result,rating_delta,player_power,opponent_power,reward_json,replay_json,battle_type)VALUES(?,?,?,?,?,?,?,?,?,?)").bind(battleId,a.id,opponentId,result,ratingDelta,sim.attackerPower,sim.defenderPower,JSON.stringify({arenaCoins:coins}),JSON.stringify(sim.turns),"RANKED")
+ ]);return J({battleId,result,ratingDelta,arenaCoinsEarned:coins,playerPower:sim.attackerPower,opponentPower:sim.defenderPower,state:s,replay:sim.turns})
 }
-async function arenaSpar(req,env,a){const {targetPlayerId}=await req.json();if(!targetPlayerId||targetPlayerId===a.id)return J({error:"INVALID_OPPONENT"},400);const s=await stateOf(env,a.id),o=await env.DB.prepare(`SELECT p.display_name,ap.defense_team_json,ap.defense_strategy,gs.state_json FROM players p JOIN arena_profiles ap ON ap.player_id=p.id JOIN game_saves gs ON gs.player_id=p.id WHERE p.id=?`).bind(targetPlayerId).first();if(!o)return J({error:"OPPONENT_NOT_FOUND"},404);const os=parse(o.state_json,structuredClone(DEFAULT_STATE)),myTeam=(s.team||[]).slice(0,3),enemyTeam=parse(o.defense_team_json,os.team||[]),myPower=arenaPower(s,myTeam),enemyPower=arenaPower(os,enemyTeam),win=Math.random()<Math.max(.15,Math.min(.85,.5+(myPower-enemyPower)/Math.max(1800,myPower+enemyPower))),result=win?"WIN":"LOSE",replay=arenaReplayTurns(myTeam,enemyTeam,myPower,enemyPower,"BALANCED",o.defense_strategy||"BALANCED",win),id=crypto.randomUUID();await env.DB.prepare("INSERT INTO arena_battles(battle_key,player_id,opponent_id,result,rating_delta,player_power,opponent_power,reward_json,replay_json,battle_type)VALUES(?,?,?,?,0,?,?,?,?,'SPAR')").bind(id,a.id,targetPlayerId,result,myPower,enemyPower,"{}",JSON.stringify(replay)).run();return J({battleId:id,result,playerPower:myPower,opponentPower:enemyPower,replay})}
-async function arenaAddFriend(req,env,a){const {friendPlayerId}=await req.json();if(!friendPlayerId||friendPlayerId===a.id)return J({error:"INVALID_FRIEND"},400);if(!await env.DB.prepare("SELECT 1 x FROM players WHERE id=?").bind(friendPlayerId).first())return J({error:"PLAYER_NOT_FOUND"},404);await env.DB.batch([env.DB.prepare("INSERT OR IGNORE INTO arena_friendships(player_id,friend_player_id)VALUES(?,?)").bind(a.id,friendPlayerId),env.DB.prepare("INSERT OR IGNORE INTO arena_friendships(player_id,friend_player_id)VALUES(?,?)").bind(friendPlayerId,a.id)]);return J({ok:true})}
+async function arenaSpar(req,env,a){const {targetPlayerId}=await req.json();if(!targetPlayerId||targetPlayerId===a.id)return J({error:"INVALID_OPPONENT"},400);const s=await stateOf(env,a.id),o=await env.DB.prepare(`SELECT p.display_name,ap.defense_team_json,ap.defense_strategy,gs.state_json FROM players p JOIN arena_profiles ap ON ap.player_id=p.id JOIN game_saves gs ON gs.player_id=p.id WHERE p.id=?`).bind(targetPlayerId).first();if(!o)return J({error:"OPPONENT_NOT_FOUND"},404);const os=parse(o.state_json,structuredClone(DEFAULT_STATE)),myTeam=(s.team||[]).filter(id=>s.owned?.[id]).slice(0,3),enemyTeam=parse(o.defense_team_json,os.team||[]).filter(id=>os.owned?.[id]).slice(0,3),id=crypto.randomUUID(),sim=simulateArenaBattle(s,myTeam,os,enemyTeam,"BALANCED",o.defense_strategy||"BALANCED",id),result=sim.win?"WIN":"LOSE";await env.DB.prepare("INSERT INTO arena_battles(battle_key,player_id,opponent_id,result,rating_delta,player_power,opponent_power,reward_json,replay_json,battle_type)VALUES(?,?,?,?,0,?,?,?,?,'SPAR')").bind(id,a.id,targetPlayerId,result,sim.attackerPower,sim.defenderPower,"{}",JSON.stringify(sim.turns)).run();return J({battleId:id,result,playerPower:sim.attackerPower,opponentPower:sim.defenderPower,replay:sim.turns})}
+async function arenaFriendSearch(req,env,a){const q=String(new URL(req.url).searchParams.get("q")||"").trim();if(q.length<1)return J({rows:[]});const like=`%${q}%`;const rows=(await env.DB.prepare(`SELECT p.id,p.display_name,p.picture_url,ap.friend_code,ap.rating,ap.wins,ap.losses FROM players p LEFT JOIN arena_profiles ap ON ap.player_id=p.id WHERE p.id<>? AND (UPPER(COALESCE(ap.friend_code,''))=UPPER(?) OR p.display_name LIKE ?) ORDER BY CASE WHEN UPPER(COALESCE(ap.friend_code,''))=UPPER(?) THEN 0 ELSE 1 END,p.display_name LIMIT 10`).bind(a.id,q,like,q).all()).results;return J({rows:rows.map(x=>({id:x.id,displayName:x.display_name,pictureUrl:x.picture_url||"",friendCode:x.friend_code||"",rating:Number(x.rating||1000),tier:arenaTier(Number(x.rating||1000)),wins:Number(x.wins||0),losses:Number(x.losses||0)}))})}
+async function arenaAddFriend(req,env,a){const b=await req.json(),input=String(b.friendCode||b.friendPlayerId||"").trim();if(!input)return J({error:"INVALID_FRIEND"},400);let friend=await env.DB.prepare("SELECT p.id,p.display_name FROM players p LEFT JOIN arena_profiles ap ON ap.player_id=p.id WHERE UPPER(ap.friend_code)=UPPER(?) OR p.id=?").bind(input,input).first();if(!friend)return J({error:"PLAYER_NOT_FOUND"},404);if(friend.id===a.id)return J({error:"INVALID_FRIEND"},400);await env.DB.batch([env.DB.prepare("INSERT OR IGNORE INTO arena_friendships(player_id,friend_player_id)VALUES(?,?)").bind(a.id,friend.id),env.DB.prepare("INSERT OR IGNORE INTO arena_friendships(player_id,friend_player_id)VALUES(?,?)").bind(friend.id,a.id)]);return J({ok:true,friend})}
 async function arenaLeaderboard(req,env,a){const scope=new URL(req.url).searchParams.get('scope')||'global';let sql=`SELECT p.id,p.display_name,ap.rating,ap.wins,ap.losses,ap.highest_rating FROM arena_profiles ap JOIN players p ON p.id=ap.player_id`,bind=[];if(scope==='friends'){sql+=` WHERE p.id IN (SELECT friend_player_id FROM arena_friendships WHERE player_id=?)`;bind=[a.id]}else if(scope==='guild'){const me=await env.DB.prepare("SELECT guild_id FROM arena_profiles WHERE player_id=?").bind(a.id).first();if(!me?.guild_id)return J({scope,rows:[],message:"尚未加入公會"});sql+=` WHERE ap.guild_id=?`;bind=[me.guild_id]}sql+=` ORDER BY ap.rating DESC,ap.wins DESC LIMIT 100`;const rows=(await env.DB.prepare(sql).bind(...bind).all()).results;return J({scope,rows:rows.map((x,i)=>({rank:i+1,id:x.id,displayName:x.display_name,rating:Number(x.rating||1000),tier:arenaTier(Number(x.rating||1000)),wins:Number(x.wins||0),losses:Number(x.losses||0),highestTier:arenaTier(Number(x.highest_rating||x.rating||1000)),isMe:x.id===a.id}))})}
 async function arenaReplay(env,a,id){const b=await env.DB.prepare("SELECT * FROM arena_battles WHERE (battle_key=? OR CAST(id AS TEXT)=?) AND (player_id=? OR opponent_id=?)").bind(id,id,a.id,a.id).first();if(!b)return J({error:"NOT_FOUND"},404);return J({id:b.battle_key||String(b.id),result:b.result,battleType:b.battle_type||"RANKED",replay:parse(b.replay_json,[])})}
 async function arenaClaimReward(req,env,a){const {type}=await req.json(),s=await stateOf(env,a.id),p=await ensureArenaProfile(env,a,s),states=await arenaRewardState(env,a,p),r=states[type];if(!r)return J({error:"INVALID_REWARD"},400);if(r.claimed||r.progress<r.target)return J({error:"NOT_CLAIMABLE"},409);const key=type==='daily'?taipeiDate():type==='weekly'?arenaWeekKey():arenaSeasonKey();await env.DB.prepare("INSERT INTO arena_reward_claims(player_id,reward_type,period_key,reward_json)VALUES(?,?,?,?)").bind(a.id,type,key,JSON.stringify(r.reward)).run();if(r.reward.gems)s.gems+=r.reward.gems;await save(env,a.id,s);await env.DB.prepare("UPDATE arena_profiles SET arena_coins=arena_coins+? WHERE player_id=?").bind(Number(r.reward.arenaCoins||0),a.id).run();return J({ok:true,reward:r.reward,state:s})}
@@ -438,7 +476,7 @@ function getCookie(r,n){for(const x of (r.headers.get("Cookie")||"").split(";"))
 function cookie(n,v,age){return`${n}=${v}; Path=/; Max-Age=${age}; HttpOnly; Secure; SameSite=Strict`}
 
 async function lineDiagnostics(env,req){
- const result={ok:true,version:"1.8",origin:new URL(req.url).origin,checks:{lineChannelId:!!env.LINE_CHANNEL_ID,lineChannelSecret:!!env.LINE_CHANNEL_SECRET,d1Binding:!!env.DB,oauthStatesTable:false}};
+ const result={ok:true,version:"1.8.2",origin:new URL(req.url).origin,checks:{lineChannelId:!!env.LINE_CHANNEL_ID,lineChannelSecret:!!env.LINE_CHANNEL_SECRET,d1Binding:!!env.DB,oauthStatesTable:false}};
  if(env.DB){try{await env.DB.prepare("SELECT state FROM oauth_states LIMIT 1").first();result.checks.oauthStatesTable=true}catch(e){result.ok=false;result.databaseError=safeError(e)}}
  if(!result.checks.lineChannelId||!result.checks.lineChannelSecret||!result.checks.d1Binding||!result.checks.oauthStatesTable)result.ok=false;
  result.callbackUrl=result.origin+"/auth/line/callback";

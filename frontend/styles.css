@@ -151,3 +151,9 @@ body{
 .replay-turn{padding:10px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .replay-result{font-size:1.1rem;font-weight:800;color:var(--accent)}
 @media(max-width:640px){.arena-friend-tools>*{width:100%}.arena-defense-controls select{width:100%}}
+
+/* v1.8.2 arena replay and friend discovery */
+.arena-friend-code{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--border);background:#0d1022;border-radius:14px;margin-bottom:12px;flex-wrap:wrap}.arena-friend-code strong{color:#65d9ff;letter-spacing:1px}
+.arena-search-results{display:grid;gap:10px;margin-bottom:14px}.arena-search-card,.arena-friend-card{display:flex;align-items:center;gap:10px;border:1px solid var(--border);background:var(--panel);border-radius:14px;padding:12px}.arena-search-card>div,.arena-friend-card>div{flex:1}.arena-search-card small,.arena-friend-card small{display:block;color:var(--muted);margin-top:4px}
+.replay-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}.replay-toolbar small{color:var(--muted)}.replay-turn{padding:14px 0;border-bottom:1px solid var(--border)}.replay-line{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.replay-hp{height:24px;border-radius:999px;background:#27152a;position:relative;overflow:hidden;margin-top:9px;border:1px solid #55335b}.replay-hp i{display:block;height:100%;background:linear-gradient(90deg,#52d98b,#84e66f);transition:width .3s}.replay-hp span{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;font-weight:700}.replay-defeated{opacity:.75}.replay-defeated .replay-hp i{background:#ff627e}
+@media(max-width:640px){.arena-search-card,.arena-friend-card{align-items:stretch;flex-direction:column}.arena-search-card button,.arena-friend-card button{width:100%}}
