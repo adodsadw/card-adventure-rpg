@@ -10,7 +10,7 @@ const STAGES={
 const SHOP={energyPotion:{price:600,kind:"item"},potion:{price:300,kind:"item"},wood:{price:180,kind:"material"},ore:{price:260,kind:"material"},herb:{price:220,kind:"material"},sword:{price:1800,kind:"equipment"},armor:{price:2200,kind:"equipment"}};
 const DEFAULT_STATE={gold:1200,gems:1200,energy:30,maxEnergy:30,stageUnlocked:1,dailyClaimed:"",team:["aria","mira","gorn"],owned:{aria:{level:1,rank:1,xp:0,copies:1,equipment:{}},mira:{level:1,rank:1,xp:0,copies:1,equipment:{}},gorn:{level:1,rank:1,xp:0,copies:1,equipment:{}}},inventory:{wood:0,ore:0,herb:0,core:0,potion:3,energyPotion:0,equipment:{sword:1,armor:1}},tutorialDone:false,sound:true};
 export default{async fetch(req,env){const u=new URL(req.url);try{
-if(u.pathname==="/api/health")return J({ok:true,version:"1.8.2",serverAuthoritative:true,admin:true});
+if(u.pathname==="/api/health")return J({ok:true,version:"1.8.3",serverAuthoritative:true,admin:true});
 if(u.pathname==="/api/diagnostics/line")return await lineDiagnostics(env,req);
 if(u.pathname==="/auth/line/start")return await startLine(req,env);if(u.pathname==="/auth/line/callback")return await callback(req,env);
 if(u.pathname==="/api/logout"&&req.method==="POST")return await logout(req,env);
@@ -199,7 +199,7 @@ async function publicCatalog(env){
     loginRewards:await rows(env,"SELECT * FROM gm_login_rewards WHERE active=1 ORDER BY campaign_key,day_index"),
     announcements:await rows(env,"SELECT * FROM gm_announcements_v2 WHERE active=1 AND (NULLIF(starts_at,'') IS NULL OR starts_at<=?) AND (NULLIF(ends_at,'') IS NULL OR ends_at>?) ORDER BY pinned DESC,priority DESC,created_at DESC",[now,now]),
     banners:await rows(env,"SELECT * FROM gm_banners WHERE active=1 AND (NULLIF(starts_at,'') IS NULL OR starts_at<=?) AND (NULLIF(ends_at,'') IS NULL OR ends_at>?) ORDER BY sort_order,created_at DESC",[now,now]),
-    version:"1.8.2"
+    version:"1.8.3"
   });
 }
 async function catalogList(env,e){const t=CATALOG_TABLES[e];if(!t)return J({error:"UNKNOWN_ENTITY"},404);return J({rows:await rows(env,`SELECT * FROM ${t} ORDER BY updated_at DESC`)})}
@@ -402,10 +402,66 @@ if(u.pathname==="/api/admin/player/delete"&&req.method==="POST"){
   await log(env,"DELETE_PLAYER",player.id,{lineUserId:player.line_user_id||""},b.reason);
   return J({ok:true})
 }
+if(u.pathname==="/api/admin/arena/search"&&req.method==="GET")return await adminArenaSearch(req,env);
+if(u.pathname==="/api/admin/arena/player"&&req.method==="GET")return await adminArenaPlayer(req,env);
+if(u.pathname==="/api/admin/arena/update"&&req.method==="POST")return await adminArenaUpdate(req,env);
+if(u.pathname==="/api/admin/arena/attempts"&&req.method==="POST")return await adminArenaAttempts(req,env);
+if(u.pathname==="/api/admin/arena/clear-battles"&&req.method==="POST")return await adminArenaClearBattles(req,env);
+if(u.pathname==="/api/admin/arena/reset-player-season"&&req.method==="POST")return await adminArenaResetPlayerSeason(req,env);
+if(u.pathname==="/api/admin/arena/reset-season"&&req.method==="POST")return await adminArenaResetSeason(req,env);
+if(u.pathname==="/api/admin/arena/reset-leaderboard"&&req.method==="POST")return await adminArenaResetLeaderboard(req,env);
 if(u.pathname==="/api/admin/catalog/sync-defaults"&&req.method==="POST")return await catalogSyncStatus(env);
 if(u.pathname==="/api/admin/media/upload"&&req.method==="POST")return await mediaUpload(req,env);
 if(u.pathname.startsWith("/api/admin/catalog/")){const p=u.pathname.split("/").filter(Boolean),entity=p[3],id=p[4]||"";if(req.method==="GET")return await catalogList(env,entity);if(req.method==="POST")return await catalogSave(req,env,entity);if(req.method==="DELETE")return await catalogDelete(env,entity,id)}
 if(u.pathname==="/api/admin/logs"){const logs=(await env.DB.prepare("SELECT * FROM admin_logs ORDER BY id DESC LIMIT 100").all()).results;return J({logs})}return J({error:"NOT_FOUND"},404)}
+
+async function adminArenaSearch(req,env){
+  const q=String(new URL(req.url).searchParams.get("q")||"").trim();
+  if(!q)return J({rows:[]});
+  const like=`%${q}%`;
+  const rows=(await env.DB.prepare(`SELECT p.id,p.display_name,p.line_user_id,ap.rating,ap.arena_coins,ap.wins,ap.losses,ap.highest_rating,ap.friend_code
+    FROM players p LEFT JOIN arena_profiles ap ON ap.player_id=p.id
+    WHERE p.id LIKE ? OR p.display_name LIKE ? OR p.line_user_id LIKE ? OR ap.friend_code LIKE ?
+    ORDER BY p.display_name LIMIT 30`).bind(like,like,like,like).all()).results;
+  return J({rows:rows.map(x=>({id:x.id,displayName:x.display_name,lineUserId:x.line_user_id||"",rating:Number(x.rating||1000),arenaCoins:Number(x.arena_coins||0),tier:arenaTier(Number(x.rating||1000)),wins:Number(x.wins||0),losses:Number(x.losses||0),highestRating:Number(x.highest_rating||x.rating||1000),friendCode:x.friend_code||""}))})
+}
+async function adminArenaPlayer(req,env){
+  const id=String(new URL(req.url).searchParams.get("playerId")||"").trim();
+  if(!id)return J({error:"PLAYER_REQUIRED"},400);
+  const p=await env.DB.prepare(`SELECT p.id,p.display_name,p.line_user_id,p.picture_url,ap.* FROM players p LEFT JOIN arena_profiles ap ON ap.player_id=p.id WHERE p.id=?`).bind(id).first();
+  if(!p)return J({error:"PLAYER_NOT_FOUND"},404);
+  if(!p.season_key){const s=await stateOf(env,id);await ensureArenaProfile(env,{id},s)}
+  const row=await env.DB.prepare(`SELECT p.id,p.display_name,p.line_user_id,p.picture_url,ap.* FROM players p JOIN arena_profiles ap ON ap.player_id=p.id WHERE p.id=?`).bind(id).first();
+  const date=taipeiDate();
+  const used=Number((await env.DB.prepare("SELECT used_count FROM arena_daily_attempts WHERE player_id=? AND attempt_date=?").bind(id,date).first())?.used_count||0);
+  const battleCount=Number((await env.DB.prepare("SELECT COUNT(*) c FROM arena_battles WHERE player_id=? OR opponent_id=?").bind(id,id).first())?.c||0);
+  const friendCount=Number((await env.DB.prepare("SELECT COUNT(*) c FROM arena_friendships WHERE player_id=?").bind(id).first())?.c||0);
+  const total=Number(row.wins||0)+Number(row.losses||0);
+  return J({player:{id:row.id,displayName:row.display_name,lineUserId:row.line_user_id||"",pictureUrl:row.picture_url||"",rating:Number(row.rating||1000),arenaCoins:Number(row.arena_coins||0),tier:arenaTier(Number(row.rating||1000)),wins:Number(row.wins||0),losses:Number(row.losses||0),winRate:total?Math.round(Number(row.wins||0)*1000/total)/10:0,highestRating:Number(row.highest_rating||row.rating||1000),highestTier:arenaTier(Number(row.highest_rating||row.rating||1000)),currentStreak:Number(row.current_streak||0),bestStreak:Number(row.best_streak||0),seasonKey:row.season_key||arenaSeasonKey(),friendCode:row.friend_code||"",usedToday:used,remainingToday:Math.max(0,5-used),battleCount,friendCount}})
+}
+async function adminArenaUpdate(req,env){
+  const b=await req.json(),id=String(b.playerId||"").trim();if(!id)return J({error:"PLAYER_REQUIRED"},400);
+  const old=await env.DB.prepare("SELECT * FROM arena_profiles WHERE player_id=?").bind(id).first();if(!old)return J({error:"ARENA_PROFILE_NOT_FOUND"},404);
+  let rating=limit(b.rating,0,999999),coins=limit(b.arenaCoins,0,999999999),wins=limit(b.wins,0,999999999),losses=limit(b.losses,0,999999999),bestStreak=limit(b.bestStreak,0,999999999),currentStreak=limit(b.currentStreak,0,999999999),highest=limit(b.highestRating,0,999999);
+  if(highest<rating)highest=rating;
+  await env.DB.prepare(`UPDATE arena_profiles SET rating=?,arena_coins=?,wins=?,losses=?,current_streak=?,best_streak=?,highest_rating=?,season_high_rating=MAX(season_high_rating,?),updated_at=CURRENT_TIMESTAMP WHERE player_id=?`).bind(rating,coins,wins,losses,currentStreak,bestStreak,highest,rating,id).run();
+  await log(env,"ARENA_UPDATE",id,{before:{rating:old.rating,arenaCoins:old.arena_coins,wins:old.wins,losses:old.losses},after:{rating,arenaCoins:coins,wins,losses,currentStreak,bestStreak,highestRating:highest}},b.reason||"");
+  return adminArenaPlayer(new Request(new URL(`/api/admin/arena/player?playerId=${encodeURIComponent(id)}`,req.url)),env)
+}
+async function adminArenaAttempts(req,env){
+  const b=await req.json(),id=String(b.playerId||"").trim();if(!id)return J({error:"PLAYER_REQUIRED"},400);
+  const date=taipeiDate(),mode=String(b.mode||"add"),amount=limit(b.amount,0,999999);
+  const row=await env.DB.prepare("SELECT used_count FROM arena_daily_attempts WHERE player_id=? AND attempt_date=?").bind(id,date).first();let used=Number(row?.used_count||0),before=used;
+  if(mode==="reset")used=0;else if(mode==="setRemaining")used=Math.max(0,5-limit(b.remaining,0,999999));else if(mode==="add")used=Math.max(0,used-amount);else return J({error:"INVALID_MODE"},400);
+  await env.DB.prepare(`INSERT INTO arena_daily_attempts(player_id,attempt_date,used_count)VALUES(?,?,?) ON CONFLICT(player_id,attempt_date) DO UPDATE SET used_count=excluded.used_count`).bind(id,date,used).run();
+  await log(env,"ARENA_ATTEMPTS",id,{beforeUsed:before,afterUsed:used,mode,amount},b.reason||"");
+  return adminArenaPlayer(new Request(new URL(`/api/admin/arena/player?playerId=${encodeURIComponent(id)}`,req.url)),env)
+}
+async function adminArenaClearBattles(req,env){const b=await req.json(),id=String(b.playerId||"").trim();if(!id)return J({error:"PLAYER_REQUIRED"},400);const c=Number((await env.DB.prepare("SELECT COUNT(*) c FROM arena_battles WHERE player_id=? OR opponent_id=?").bind(id,id).first())?.c||0);await env.DB.prepare("DELETE FROM arena_battles WHERE player_id=? OR opponent_id=?").bind(id,id).run();await log(env,"ARENA_CLEAR_BATTLES",id,{deleted:c},b.reason||"");return J({ok:true,deleted:c})}
+async function adminArenaResetPlayerSeason(req,env){const b=await req.json(),id=String(b.playerId||"").trim();if(!id)return J({error:"PLAYER_REQUIRED"},400);await env.DB.prepare("UPDATE arena_profiles SET rating=1000,wins=0,losses=0,current_streak=0,season_high_rating=1000,season_key=?,updated_at=CURRENT_TIMESTAMP WHERE player_id=?").bind(arenaSeasonKey(),id).run();await log(env,"ARENA_RESET_PLAYER_SEASON",id,{season:arenaSeasonKey()},b.reason||"");return adminArenaPlayer(new Request(new URL(`/api/admin/arena/player?playerId=${encodeURIComponent(id)}`,req.url)),env)}
+async function adminArenaResetSeason(req,env){const b=await req.json();const count=Number((await env.DB.prepare("SELECT COUNT(*) c FROM arena_profiles").first())?.c||0);await env.DB.batch([env.DB.prepare("UPDATE arena_profiles SET rating=1000,wins=0,losses=0,current_streak=0,season_high_rating=1000,season_key=?,opponent_ids_json='[]',next_free_refresh_at=NULL,updated_at=CURRENT_TIMESTAMP").bind(arenaSeasonKey()),env.DB.prepare("DELETE FROM arena_daily_attempts"),env.DB.prepare("DELETE FROM arena_reward_claims")]);await log(env,"ARENA_RESET_SEASON","ALL",{players:count,season:arenaSeasonKey()},b.reason||"");return J({ok:true,players:count,seasonKey:arenaSeasonKey()})}
+async function adminArenaResetLeaderboard(req,env){const b=await req.json();const count=Number((await env.DB.prepare("SELECT COUNT(*) c FROM arena_profiles").first())?.c||0);await env.DB.prepare("UPDATE arena_profiles SET rating=1000,wins=0,losses=0,current_streak=0,season_high_rating=1000,updated_at=CURRENT_TIMESTAMP").run();await log(env,"ARENA_RESET_LEADERBOARD","ALL",{players:count},b.reason||"");return J({ok:true,players:count})}
+
 async function adminLogin(req,env){if(!env.ADMIN_PASSWORD)throw Error("ADMIN_PASSWORD_NOT_CONFIGURED");const b=await req.json();if(!await eq(String(b.password||""),env.ADMIN_PASSWORD))return J({error:"INVALID_PASSWORD"},401);const token=random(32),hash=await sha(token),exp=new Date(Date.now()+8*3600000).toISOString();await env.DB.prepare("INSERT INTO admin_sessions(id,token_hash,expires_at)VALUES(?,?,?)").bind(crypto.randomUUID(),hash,exp).run();return J({ok:true},200,{"Set-Cookie":cookie(ADMIN_COOKIE,token,8*3600)})}
 
 function missionDefs(){return[{id:"battle3",icon:"⚔️",title:"完成 3 場戰鬥",type:"battle",target:3,reward:{gold:800}},{id:"win2",icon:"🏆",title:"取得 2 場勝利",type:"win",target:2,reward:{gems:60}},{id:"summon1",icon:"✨",title:"進行 1 次召喚",type:"summon",target:1,reward:{energy:8}}]}
@@ -476,7 +532,7 @@ function getCookie(r,n){for(const x of (r.headers.get("Cookie")||"").split(";"))
 function cookie(n,v,age){return`${n}=${v}; Path=/; Max-Age=${age}; HttpOnly; Secure; SameSite=Strict`}
 
 async function lineDiagnostics(env,req){
- const result={ok:true,version:"1.8.2",origin:new URL(req.url).origin,checks:{lineChannelId:!!env.LINE_CHANNEL_ID,lineChannelSecret:!!env.LINE_CHANNEL_SECRET,d1Binding:!!env.DB,oauthStatesTable:false}};
+ const result={ok:true,version:"1.8.3",origin:new URL(req.url).origin,checks:{lineChannelId:!!env.LINE_CHANNEL_ID,lineChannelSecret:!!env.LINE_CHANNEL_SECRET,d1Binding:!!env.DB,oauthStatesTable:false}};
  if(env.DB){try{await env.DB.prepare("SELECT state FROM oauth_states LIMIT 1").first();result.checks.oauthStatesTable=true}catch(e){result.ok=false;result.databaseError=safeError(e)}}
  if(!result.checks.lineChannelId||!result.checks.lineChannelSecret||!result.checks.d1Binding||!result.checks.oauthStatesTable)result.ok=false;
  result.callbackUrl=result.origin+"/auth/line/callback";
