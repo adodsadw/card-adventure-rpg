@@ -12,56 +12,23 @@
 <body>
   <div id="app">
     <header class="topbar">
-      <div>
-        <div class="eyebrow">CARD ADVENTURE RPG</div>
-        <h1>星界遠征</h1>
-      </div>
+      <div><div class="eyebrow">CARD ADVENTURE RPG</div><h1>星界遠征</h1></div>
       <div class="resources">
-        <button class="account-chip" id="accountButton" aria-label="玩家帳號">
-          <span id="accountAvatar">👤</span><b id="accountName">訪客</b>
-        </button>
+        <button class="account-chip" id="accountButton" aria-label="玩家帳號"><span id="accountAvatar">👤</span><b id="accountName">訪客</b></button>
         <button class="sound-toggle" id="soundToggle" aria-label="音效開關">🔊</button>
-        <span>🪙 <b id="goldValue">0</b></span>
-        <span>💎 <b id="gemValue">0</b></span>
-        <span>⚡ <b id="energyValue">0/0</b></span>
+        <span>🪙 <b id="goldValue">0</b></span><span>💎 <b id="gemValue">0</b></span><span>⚡ <b id="energyValue">0/0</b></span>
       </div>
     </header>
-
     <main>
       <section id="homePage" class="page active"><div id="announcementBar" class="announcement-bar hidden"></div><div id="homeBanner" class="home-banner hidden" aria-label="首頁活動 Banner"></div>
-        <div class="hero-panel">
-          <div>
-            <span class="chapter-badge">第一章</span>
-            <h2>被遺忘的森林</h2>
-            <p>黑霧正在吞噬森林。召集英雄，擊敗守門獸，找出星界裂縫的來源。</p>
-            <button class="primary" data-go="stagePage">開始冒險</button>
-          </div>
-          <div class="hero-orb">✦</div>
-        </div>
-
-        <div class="section-title">
-          <h3>目前隊伍</h3>
-          <button class="text-btn" data-go="teamPage">編成隊伍</button>
-        </div>
-        <div id="homeTeam" class="card-grid team-grid"></div>
-
+        <div class="hero-panel"><div><span class="chapter-badge">第一章</span><h2>被遺忘的森林</h2><p>黑霧正在吞噬森林。召集英雄，擊敗守門獸，找出星界裂縫的來源。</p><button class="primary" data-go="stagePage">開始冒險</button></div><div class="hero-orb">✦</div></div>
+        <div class="section-title"><h3>目前隊伍</h3><button class="text-btn" data-go="teamPage">編成隊伍</button></div><div id="homeTeam" class="card-grid team-grid"></div>
         <div class="dashboard-grid">
-          <button class="dashboard-card" data-go="summonPage"><span>✨</span><b>英雄召喚</b><small>招募新的夥伴</small></button>
-          <button class="dashboard-card" data-go="heroesPage"><span>🛡️</span><b>英雄名冊</b><small>升級與培養英雄</small></button>
-          <button class="dashboard-card" data-go="inventoryPage"><span>🎒</span><b>冒險背包</b><small>查看與使用道具</small></button>
-          <button class="dashboard-card" data-go="shopPage"><span>🏪</span><b>冒險商城</b><small>使用金幣購買補給</small></button>
-          <button class="dashboard-card" id="dailyButton"><span>🎁</span><b>每日補給</b><small>由伺服器發放資源</small></button>
-          <button class="dashboard-card" data-go="missionPage"><span>📋</span><b>每日任務</b><small>完成目標領取獎勵</small></button>
-          <button class="dashboard-card" data-go="mailPage"><span>📬</span><b>冒險信箱</b><small>領取補償與贈禮</small></button>
-          <button class="dashboard-card" data-go="announcementPage"><span>📢</span><b>公告中心</b><small>查看更新、活動與維護公告</small></button>
-          <button class="dashboard-card arena-entry" data-go="arenaPage"><span>⚔️</span><b>星界競技場</b><small>挑戰其他玩家的防守隊伍</small></button>
-          <button class="dashboard-card" data-go="rankingPage"><span>🏆</span><b>排行榜</b><small>查看全服冒險排名</small></button>
-          <button class="dashboard-card" data-go="dungeonPage"><span>🗝️</span><b>資源副本</b><small>金幣與素材專屬關卡</small></button>
-          <button class="dashboard-card" data-go="eventPage"><span>📅</span><b>活動中心</b><small>簽到月曆與活動關卡</small></button>
-          <button class="dashboard-card" data-go="guildPage"><span>🤝</span><b>冒險公會</b><small>好友助戰與公會支援</small></button>
+          <button class="dashboard-card" data-go="summonPage"><span>✨</span><b>英雄召喚</b><small>招募新的夥伴</small></button><button class="dashboard-card" data-go="heroesPage"><span>🛡️</span><b>英雄名冊</b><small>升級與培養英雄</small></button><button class="dashboard-card" data-go="inventoryPage"><span>🎒</span><b>冒險背包</b><small>查看與使用道具</small></button><button class="dashboard-card" data-go="shopPage"><span>🏪</span><b>冒險商城</b><small>使用金幣購買補給</small></button>
+          <button class="dashboard-card" id="dailyButton"><span>🎁</span><b>每日補給</b><small>由伺服器發放資源</small></button><button class="dashboard-card" data-go="missionPage"><span>📋</span><b>每日任務</b><small>完成目標領取獎勵</small></button><button class="dashboard-card" data-go="mailPage"><span>📬</span><b>冒險信箱</b><small>領取補償與贈禮</small></button><button class="dashboard-card" data-go="announcementPage"><span>📢</span><b>公告中心</b><small>查看更新、活動與維護公告</small></button>
+          <button class="dashboard-card arena-entry" data-go="arenaPage"><span>⚔️</span><b>星界競技場</b><small>挑戰其他玩家的防守隊伍</small></button><button class="dashboard-card" data-go="rankingPage"><span>🏆</span><b>排行榜</b><small>查看全服冒險排名</small></button><button class="dashboard-card" data-go="dungeonPage"><span>🗝️</span><b>資源副本</b><small>金幣與素材專屬關卡</small></button><button class="dashboard-card" data-go="eventPage"><span>📅</span><b>活動中心</b><small>簽到月曆與活動關卡</small></button><button class="dashboard-card" data-go="guildPage"><span>🤝</span><b>冒險公會</b><small>好友助戰與公會支援</small></button>
         </div>
       </section>
-
       <section id="stagePage" class="page"><div class="page-head"><button class="back" data-go="homePage">←</button><div><div class="eyebrow">STORY</div><h2>主線冒險</h2></div></div><div id="stageList" class="stage-list"></div></section>
       <section id="battlePage" class="page"><div class="page-head battle-head"><button class="back" id="leaveBattle">×</button><div><div class="eyebrow" id="battleStageLabel">STAGE</div><h2 id="battleTitle">戰鬥</h2></div><button class="speed-btn" id="speedButton">1×</button></div><div class="battlefield"><div class="battle-sky"><div id="battleLog" class="battle-log">戰鬥準備中…</div></div><div class="battle-row enemy-row" id="enemyRow"></div><div class="vs-line"><span>VS</span></div><div class="battle-row player-row" id="playerRow"></div></div><div class="battle-controls"><button class="primary wide" id="startBattleButton">開始戰鬥</button><button class="secondary wide hidden" id="battlePotionButton">🧪 使用治療藥水（0）</button><button class="secondary wide hidden" id="battleContinueButton">返回關卡</button></div></section>
       <section id="heroesPage" class="page"><div class="page-head"><button class="back" data-go="homePage">←</button><div><div class="eyebrow">COLLECTION</div><h2>英雄名冊</h2></div></div><div id="heroList" class="card-grid"></div><div class="info-box">點擊英雄卡片可查看詳細能力、經驗與裝備。</div></section>
@@ -71,21 +38,7 @@
       <section id="announcementPage" class="page"><div class="page-head"><button class="back" data-go="homePage">←</button><div><div class="eyebrow">NEWS CENTER</div><h2>公告中心</h2></div></div><div id="announcementTabs" class="announcement-tabs"><button class="secondary active" data-ann-filter="ALL">全部</button><button class="secondary" data-ann-filter="UPDATE">更新</button><button class="secondary" data-ann-filter="EVENT">活動</button><button class="secondary" data-ann-filter="MAINTENANCE">維護</button><button class="secondary" data-ann-filter="NOTICE">一般</button></div><div id="announcementList" class="announcement-list"></div><div id="announcementPagination" class="announcement-pagination" aria-label="公告分頁"></div></section>
       <section id="missionPage" class="page"><div class="page-head"><button class="back" data-go="homePage">←</button><div><div class="eyebrow">DAILY MISSIONS</div><h2>每日任務</h2></div></div><div id="missionList" class="inventory-list"></div></section>
       <section id="mailPage" class="page"><div class="page-head"><button class="back" data-go="homePage">←</button><div><div class="eyebrow">MAILBOX</div><h2>冒險信箱</h2></div></div><div id="mailList" class="inventory-list"></div></section>
-
-      <section id="arenaPage" class="page">
-        <div class="page-head"><button class="back" data-go="homePage">←</button><div><div class="eyebrow">ASYNC ARENA</div><h2>星界競技場</h2></div></div>
-        <div class="arena-hero"><div><span class="chapter-badge" id="arenaSeason">SEASON</span><h3 id="arenaTier">青銅 III</h3><p>離線也能被挑戰；對手會使用已儲存的防守隊伍與 AI 策略。</p></div><div class="arena-rating"><small>競技積分</small><b id="arenaRating">1000</b><span>🪙 <i id="arenaCoins">0</i> 競技幣</span></div></div>
-        <div class="arena-summary arena-summary-extended"><div><small>今日剩餘挑戰</small><b id="arenaRemaining">5 / 5</b></div><div><small>本季勝／敗</small><b><i id="arenaWins">0</i> / <i id="arenaLosses">0</i></b></div><div><small>勝率</small><b id="arenaWinRate">0%</b></div><div><small>最高段位</small><b id="arenaHighestTier">青銅 III</b></div><div><small>目前／最佳連勝</small><b><i id="arenaStreak">0</i> / <i id="arenaBestStreak">0</i></b></div></div>
-        <div class="section-title"><h3>每日／每週／賽季獎勵</h3></div><div id="arenaRewards" class="arena-rewards"></div>
-        <div class="section-title"><h3>獨立防守隊伍</h3><button class="secondary" id="saveArenaDefense">儲存防守設定</button></div><div class="arena-defense-controls"><select id="arenaDefenseStrategy"><option value="BALANCED">均衡</option><option value="FOCUS">優先集火</option><option value="HEAL">優先治療</option></select><small>防守隊伍不會影響冒險推圖隊伍。</small></div><div id="arenaDefense" class="arena-defense"></div>
-        <div class="section-title"><h3>MMR 配對對手</h3><button class="text-btn" id="refreshArena">刷新對手</button></div><div id="arenaRefreshNote" class="server-note"></div><div id="arenaOpponents" class="arena-opponents"></div>
-        <div class="section-title"><h3>好友切磋</h3></div><div class="arena-friend-code">我的好友代碼：<strong id="arenaFriendCode">尚未建立</strong><button class="text-btn" id="copyArenaFriendCode">複製</button></div><div class="arena-friend-tools"><input id="arenaFriendId" placeholder="輸入好友代碼 SR-XXXXXXXX 或玩家名稱"><button class="secondary" id="searchArenaFriend">搜尋玩家</button></div><div id="arenaFriendSearchResults" class="arena-search-results"></div><div id="arenaFriends" class="arena-friends"></div>
-        <div class="section-title"><h3>競技排行榜</h3><div class="gm-actions"><button class="text-btn active" data-arena-rank="global">全服</button><button class="text-btn" data-arena-rank="friends">好友</button><button class="text-btn" data-arena-rank="guild">公會</button></div></div><div id="arenaLeaderboard" class="ranking-list"></div>
-        <div class="section-title"><h3>最近戰鬥與回放</h3></div>
-        <div class="arena-log-tools"><input id="arenaLogSearch" placeholder="搜尋玩家名稱或好友代碼"><select id="arenaLogRange"><option value="all">全部時間</option><option value="today">今天</option><option value="week">本週</option><option value="month">本月</option></select><button class="secondary" id="arenaLogSearchBtn">搜尋</button></div>
-        <div id="arenaLogs" class="ranking-list"></div><div id="arenaLogsPagination" class="arena-pagination"></div><div id="arenaReplay" class="arena-replay hidden"></div>
-      </section>
-
+      <section id="arenaPage" class="page"><div class="page-head"><button class="back" data-go="homePage">←</button><div><div class="eyebrow">ASYNC ARENA</div><h2>星界競技場</h2></div></div><div class="arena-hero"><div><span class="chapter-badge" id="arenaSeason">SEASON</span><h3 id="arenaTier">青銅 III</h3><p>離線也能被挑戰；對手會使用已儲存的防守隊伍與 AI 策略。</p></div><div class="arena-rating"><small>競技積分</small><b id="arenaRating">1000</b><span>🪙 <i id="arenaCoins">0</i> 競技幣</span></div></div><div class="arena-summary arena-summary-extended"><div><small>今日剩餘挑戰</small><b id="arenaRemaining">5 / 5</b></div><div><small>本季勝／敗</small><b><i id="arenaWins">0</i> / <i id="arenaLosses">0</i></b></div><div><small>勝率</small><b id="arenaWinRate">0%</b></div><div><small>最高段位</small><b id="arenaHighestTier">青銅 III</b></div><div><small>目前／最佳連勝</small><b><i id="arenaStreak">0</i> / <i id="arenaBestStreak">0</i></b></div></div><div class="section-title"><h3>每日／每週／賽季獎勵</h3></div><div id="arenaRewards" class="arena-rewards"></div><div class="section-title"><h3>獨立防守隊伍</h3><button class="secondary" id="saveArenaDefense">儲存防守設定</button></div><div class="arena-defense-controls"><select id="arenaDefenseStrategy"><option value="BALANCED">均衡</option><option value="FOCUS">優先集火</option><option value="HEAL">優先治療</option></select><small>防守隊伍不會影響冒險推圖隊伍。</small></div><div id="arenaDefense" class="arena-defense"></div><div class="section-title"><h3>MMR 配對對手</h3><button class="text-btn" id="refreshArena">刷新對手</button></div><div id="arenaRefreshNote" class="server-note"></div><div id="arenaOpponents" class="arena-opponents"></div><div class="section-title"><h3>好友切磋</h3></div><div class="arena-friend-code">我的好友代碼：<strong id="arenaFriendCode">尚未建立</strong><button class="text-btn" id="copyArenaFriendCode">複製</button></div><div class="arena-friend-tools"><input id="arenaFriendId" placeholder="輸入好友代碼 SR-XXXXXXXX 或玩家名稱"><button class="secondary" id="searchArenaFriend">搜尋玩家</button></div><div id="arenaFriendSearchResults" class="arena-search-results"></div><div id="arenaFriends" class="arena-friends"></div><div class="section-title"><h3>競技排行榜</h3><div class="gm-actions"><button class="text-btn active" data-arena-rank="global">全服</button><button class="text-btn" data-arena-rank="friends">好友</button><button class="text-btn" data-arena-rank="guild">公會</button></div></div><div id="arenaLeaderboard" class="ranking-list"></div><div class="section-title"><h3>最近戰鬥與回放</h3></div><div class="arena-log-tools"><input id="arenaLogSearch" placeholder="搜尋玩家名稱或好友代碼"><select id="arenaLogRange"><option value="all">全部時間</option><option value="today">今天</option><option value="week">本週</option><option value="month">本月</option></select><button class="secondary" id="arenaLogSearchBtn">搜尋</button></div><div id="arenaLogs" class="ranking-list"></div><div id="arenaLogsPagination" class="arena-pagination"></div><div id="arenaReplay" class="arena-replay hidden"></div></section>
       <section id="rankingPage" class="page"><div class="page-head"><button class="back" data-go="homePage">←</button><div><div class="eyebrow">LEADERBOARD</div><h2>全服排行榜</h2></div></div><div id="rankingList" class="ranking-list"></div></section>
       <section id="shopPage" class="page"><div class="page-head"><button class="back" data-go="homePage">←</button><div><div class="eyebrow">ADVENTURE SHOP</div><h2>冒險商城</h2></div></div><div class="info-box">商城價格與購買結果皆由伺服器驗證。修改前端金幣無法免費購買。</div><div id="shopList" class="shop-grid"></div></section>
       <section id="dungeonPage" class="page"><div class="page-head"><button class="back" data-go="homePage">←</button><div><div class="eyebrow">RESOURCE DUNGEON</div><h2>資源副本</h2></div></div><div id="dungeonList" class="stage-list"></div></section>
@@ -94,15 +47,14 @@
       <section id="equipmentLabPage" class="page"><div class="page-head"><button class="back" data-go="inventoryPage">←</button><div><div class="eyebrow">FORGE LAB</div><h2>裝備工坊</h2></div></div><div id="equipmentLabList" class="inventory-list"></div></section>
       <section id="inventoryPage" class="page"><div class="page-head"><button class="back" data-go="homePage">←</button><div><div class="eyebrow">INVENTORY</div><h2>冒險背包</h2></div></div><button class="primary wide" data-go="equipmentLabPage">進入裝備工坊</button><div id="inventoryList" class="inventory-list"></div></section>
     </main>
-
     <nav class="bottom-nav"><button class="active" data-go="homePage"><span>🏠</span>首頁</button><button data-go="stagePage"><span>⚔️</span>冒險</button><button data-go="heroesPage"><span>🛡️</span>英雄</button><button data-go="summonPage"><span>✨</span>召喚</button><button data-go="shopPage"><span>🏪</span>商城</button></nav>
-
     <div id="loginGate" class="login-gate hidden"><div class="login-card"><div class="login-logo">✦</div><div class="eyebrow">CLOUD ADVENTURE</div><h2>登入星界遠征</h2><p>使用 LINE Login 建立玩家帳號，遊戲進度會安全保存到 Cloudflare D1，換手機或電腦也能繼續遊玩。</p><button class="line-login-button" id="lineLoginButton"><span>LINE</span> 使用 LINE 登入</button><button class="secondary wide" id="guestButton">先用訪客模式體驗</button><small>訪客模式只會儲存在目前瀏覽器；LINE 登入後才會啟用雲端存檔。</small></div></div>
     <div id="accountModal" class="modal hidden"><div class="modal-card account-card"><img id="profileImage" class="profile-image hidden" alt="LINE 個人圖片" /><div id="profileFallback" class="modal-icon">👤</div><h3 id="profileName">訪客玩家</h3><p id="cloudStatusText">目前使用本機存檔</p><div class="account-actions"><button class="primary wide" id="accountLoginButton">使用 LINE 登入</button><button class="secondary wide hidden" id="manualSyncButton">立即同步雲端</button><button class="secondary wide hidden" id="logoutButton">登出</button><button class="text-btn" id="accountModalClose">關閉</button></div></div></div>
     <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-icon" id="modalIcon">✨</div><h3 id="modalTitle">提示</h3><p id="modalText"></p><button class="primary wide" id="modalClose">確定</button></div></div>
     <div id="tutorial" class="modal hidden"><div class="modal-card tutorial-card"><div class="tutorial-step" id="tutorialStep"></div><div class="modal-icon" id="tutorialIcon"></div><h3 id="tutorialTitle"></h3><p id="tutorialText"></p><div class="tutorial-actions"><button class="secondary" id="tutorialSkip">略過</button><button class="primary" id="tutorialNext">下一步</button></div></div></div>
     <div id="syncIndicator" class="sync-indicator hidden"></div><div id="toast" class="toast"></div>
   </div>
+  <script src="./dom-globals.js"></script>
   <script src="./game.js"></script>
 </body>
 </html>
