@@ -4,14 +4,17 @@ on:
   push:
     branches:
       - v1.8.5-version-and-dashboard
-    paths:
-      - .github/workflows/v1.8.5-finalize.yml
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
 
 jobs:
   finalize:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
