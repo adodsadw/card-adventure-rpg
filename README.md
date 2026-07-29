@@ -7,12 +7,13 @@
 - 新增 **總覽** 頁籤，集中查看營運資訊。
 - 顯示玩家總數、今日登入、近 7 日活躍、停權玩家與平均關卡。
 - 顯示全服金幣／鑽石總量與最近管理操作。
+- Worker 改由 `worker/src/app.js` 作為版本入口，`/api/health` 統一回傳 `1.8.5`。
 - 顯示 Worker `/api/health` 回傳的伺服器版本，便於發現前後端版本不同步。
 - Service Worker 快取名稱更新為 `starrealm-v1.8.5`。
 
 ## 從 v1.8.4 升級
 
-本版目前沒有新增 D1 資料表，因此不需要執行 Migration。
+本版沒有新增 D1 資料表，因此不需要執行 Migration。
 
 ### 1. 進入 Worker 目錄
 
@@ -20,13 +21,35 @@
 cd worker
 ```
 
-### 2. 部署
+### 2. 確認 Worker 入口
+
+`worker/wrangler.toml` 必須是：
+
+```toml
+main = "src/app.js"
+```
+
+### 3. 部署
 
 ```bash
 npx wrangler deploy --config wrangler.toml
 ```
 
-### 3. 清除舊快取
+### 4. 確認版本
+
+部署完成後開啟：
+
+```text
+/api/health
+```
+
+應回傳：
+
+```json
+{"ok":true,"version":"1.8.5","serverAuthoritative":true,"admin":true}
+```
+
+### 5. 清除舊快取
 
 Service Worker 快取名稱已更新為：
 
@@ -68,6 +91,7 @@ name = "card-adventure-rpg"
 ## 驗證
 
 ```bash
+node --check worker/src/app.js
 node --check worker/src/index.js
 node --check frontend/game.js
 node --check frontend/admin.js
